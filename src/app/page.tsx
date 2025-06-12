@@ -2,8 +2,6 @@
 'use client';
 
 import ThemeClient from '../components/ThemeClient';
-import DarkModeToggle from '../components/DarkModeToggle';
-
 import Navbar from '@/sections/Navbar';
 import Hero from '../sections/Hero';
 import Projects from '../sections/Projects';

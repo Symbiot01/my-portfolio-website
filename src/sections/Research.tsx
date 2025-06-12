@@ -148,7 +148,7 @@ export default function Research() {
   ];
 
   const renderCards = (items: typeof papers, animate: boolean) =>
-    items.map((item, index) => (
+    items.map((item) => (
       <Card
         key={item.title}
         initial={animate ? { opacity: 0, y: 30 } : false}

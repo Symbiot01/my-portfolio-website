@@ -165,6 +165,7 @@ export default function Skills() {
       <Grid>
         {data.map((category, index) => (
           <motion.div
+            key={category.title}
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
