@@ -3,6 +3,7 @@
 import styled from '@emotion/styled';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 
 const Section = styled.section`
   padding: 4rem 2rem;
@@ -195,7 +196,13 @@ export default function Gallery() {
             transition={{ duration: 0.4, delay: i * 0.1 }}
             viewport={{ once: true }}
           >
-            <img src={item.image} alt={item.title} />
+            <Image
+              src={item.image}
+              alt={item.title}
+              width={800}
+              height={520}
+              style={{ width: '100%', height: '220px', objectFit: 'cover' }}
+            />
             <h3>{item.title}</h3>
           </Card>
         ))}

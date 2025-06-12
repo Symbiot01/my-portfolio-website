@@ -2,8 +2,6 @@
 
 import styled from '@emotion/styled';
 import { useState } from 'react';
-import { Tabs, TabList, Tab, TabPanel } from 'react-tabs';
-import 'react-tabs/style/react-tabs.css';
 import { motion } from 'framer-motion';
 import { FiBookOpen, FiCode, FiAward } from 'react-icons/fi';
 
@@ -25,40 +23,28 @@ const Title = styled.h2`
   -webkit-text-fill-color: transparent;
 `;
 
-const StyledTabs = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-`;
-
-const StyledTabList = styled(TabList)`
+const FilterBar = styled.div`
   display: flex;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 2rem;
-  border: none;
+  gap: 0.5rem;
+  margin-bottom: 2.5rem;
+`;
 
-  .react-tabs__tab {
-    background: ${({ theme }) => theme.surface};
-    color: ${({ theme }) => theme.text};
-    padding: 0.6rem 1.4rem;
-    border-radius: 999px;
-    border: 2px solid transparent;
-    font-weight: 600;
-    cursor: pointer;
-    transition: 0.3s ease;
+const FilterButton = styled.button<{ active: boolean }>`
+  padding: 0.5rem 1.25rem;
+  background: ${({ active, theme }) => (active ? theme.accent : theme.toggleBg)};
+  color: ${({ active, theme }) => (active ? '#fff' : theme.text)};
+  border: 1px solid ${({ theme }) => theme.border};
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 1rem;
+  transition: background 0.2s ease;
 
-    &:hover {
-      background: ${({ theme }) => theme.toggleBg};
-    }
-  }
-
-  .react-tabs__tab--selected {
+  &:hover {
     background: ${({ theme }) => theme.accent};
-    color: white;
-    border-color: ${({ theme }) => theme.accent};
+    color: #fff;
   }
 `;
 
@@ -68,7 +54,7 @@ const Grid = styled.div`
   grid-template-columns: repeat(2, 1fr);
 
   @media (max-width: 768px) {
-    grid-template-columns: 1fr; // Stack on small screens
+    grid-template-columns: 1fr;
   }
 `;
 
@@ -105,78 +91,81 @@ const IconWrap = styled.div`
   color: ${({ theme }) => theme.accent};
 `;
 
+const categories = ['All', 'Papers', 'Notebooks', 'Courses'];
+
+const items = [
+  {
+    title: 'RLHF Paper Summary',
+    desc: 'Understanding Reinforcement Learning with Human Feedback.',
+    icon: <FiBookOpen />,
+    category: 'Papers',
+  },
+  {
+    title: 'Attention is All You Need',
+    desc: 'Explains the Transformer architecture with self-attention.',
+    icon: <FiBookOpen />,
+    category: 'Papers',
+  },
+  {
+    title: 'DDPG on OpenAI Gym',
+    desc: 'Deep Deterministic Policy Gradient implementation on custom gym env.',
+    icon: <FiCode />,
+    category: 'Notebooks',
+  },
+  {
+    title: 'Image Classification with PyTorch',
+    desc: 'CNN-based image classifier Colab notebook.',
+    icon: <FiCode />,
+    category: 'Notebooks',
+  },
+  {
+    title: 'Deep Learning Specialization',
+    desc: 'Andrew Ng’s 5-part course on Coursera.',
+    icon: <FiAward />,
+    category: 'Courses',
+  },
+  {
+    title: 'CS285: Deep RL',
+    desc: 'Berkeley’s graduate course with assignments and lectures.',
+    icon: <FiAward />,
+    category: 'Courses',
+  },
+];
+
 export default function Research() {
-  const [tabIndex, setTabIndex] = useState(0);
+  const [active, setActive] = useState('All');
 
-  const papers = [
-    {
-      title: 'RLHF Paper Summary',
-      desc: 'Understanding Reinforcement Learning with Human Feedback.',
-      icon: <FiBookOpen />,
-    },
-    {
-      title: 'Attention is All You Need',
-      desc: 'Explains the Transformer architecture with self-attention.',
-      icon: <FiBookOpen />,
-    },
-  ];
-
-  const notebooks = [
-    {
-      title: 'DDPG on OpenAI Gym',
-      desc: 'Deep Deterministic Policy Gradient implementation on custom gym env.',
-      icon: <FiCode />,
-    },
-    {
-      title: 'Image Classification with PyTorch',
-      desc: 'CNN-based image classifier Colab notebook.',
-      icon: <FiCode />,
-    },
-  ];
-
-  const courses = [
-    {
-      title: 'Deep Learning Specialization',
-      desc: 'Andrew Ng’s 5-part course on Coursera.',
-      icon: <FiAward />,
-    },
-    {
-      title: 'CS285: Deep RL',
-      desc: 'Berkeley’s graduate course with assignments and lectures.',
-      icon: <FiAward />,
-    },
-  ];
-
-  const renderCards = (items: typeof papers, animate: boolean) =>
-    items.map((item, index) => (
-      <Card
-        key={item.title}
-        initial={animate ? { opacity: 0, y: 30 } : false}
-        animate={animate ? { opacity: 1, y: 0 } : false}
-        transition={{ duration: 0.4 }}
-      >
-        <IconWrap>{item.icon}</IconWrap>
-        <CardTitle>{item.title}</CardTitle>
-        <CardDesc>{item.desc}</CardDesc>
-      </Card>
-    ));
+  const filteredItems = active === 'All' ? items : items.filter(i => i.category === active);
 
   return (
     <Section id="research">
       <Title>Research & Learning</Title>
-      <Tabs selectedIndex={tabIndex} onSelect={setTabIndex}>
-        <StyledTabs>
-          <StyledTabList>
-            <Tab>Papers</Tab>
-            <Tab>Notebooks</Tab>
-            <Tab>Courses</Tab>
-          </StyledTabList>
+      <FilterBar>
+        {categories.map(cat => (
+          <FilterButton
+            key={cat}
+            active={active === cat}
+            onClick={() => setActive(cat)}
+          >
+            {cat}
+          </FilterButton>
+        ))}
+      </FilterBar>
 
-          <TabPanel>{tabIndex === 0 && <Grid>{renderCards(papers, true)}</Grid>}</TabPanel>
-          <TabPanel>{tabIndex === 1 && <Grid>{renderCards(notebooks, true)}</Grid>}</TabPanel>
-          <TabPanel>{tabIndex === 2 && <Grid>{renderCards(courses, true)}</Grid>}</TabPanel>
-        </StyledTabs>
-      </Tabs>
+      <Grid>
+        {filteredItems.map((item, i) => (
+          <Card
+            key={item.title}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: i * 0.1 }}
+          >
+            <IconWrap>{item.icon}</IconWrap>
+            <CardTitle>{item.title}</CardTitle>
+            <CardDesc>{item.desc}</CardDesc>
+          </Card>
+        ))}
+      </Grid>
     </Section>
   );
 }
