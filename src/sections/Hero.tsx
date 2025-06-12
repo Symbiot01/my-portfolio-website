@@ -6,7 +6,6 @@ import Slider from 'react-slick';
 import Image from 'next/image';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
-import { ChevronDown } from 'lucide-react';
 import ScrollCue from '@/components/ScrollCue';
 import { useEffect, useState } from 'react';
 
@@ -203,7 +202,7 @@ export default function Hero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6, duration: 0.6 }}
         >
-          <AnimatedTitle>Hi, I'm Sahil Patel</AnimatedTitle>
+          <AnimatedTitle>Hi, I&apos;m Sahil Patel</AnimatedTitle>
           <AnimatePresence mode="wait">
             <Subtitle
               key={index}

@@ -87,7 +87,7 @@ const posts = [
 ];
 
 export default function BlogPreview() {
-  const [filter, setFilter] = useState('All');
+  const [filter] = useState('All');
   const filtered = filter === 'All' ? posts : posts.filter(p => p.tags.includes(filter));
 
   return (

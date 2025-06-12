@@ -136,13 +136,6 @@ const StyledImage = styled(Image)`
   z-index: 2;
 `;
 
-const ImageOverlay = styled.div`
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  border-radius: 0.75rem;
-  z-index: 1;
-`;
 
 
 type Props = {
