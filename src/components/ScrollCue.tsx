@@ -1,3 +1,5 @@
+// File: src/components/ScrollCue.tsx
+// Description: Animated scroll cue indicator for prompting users to scroll down.
 'use client';
 
 import styled from '@emotion/styled';

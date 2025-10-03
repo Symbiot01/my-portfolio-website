@@ -1,4 +1,6 @@
 // src/styles/theme.ts
+// File: src/styles/theme.ts
+// Description: Theme definitions for light and dark mode, and theme type.
 
 export const lightTheme = {
   background: '#fefaf6',

@@ -1,4 +1,5 @@
-// src/context/ThemeContext.tsx
+// File: src/context/ThemeContext.tsx
+// Description: React context and provider for managing dark/light theme state.
 'use client';
 
 import { createContext, useContext, useState, ReactNode } from 'react';

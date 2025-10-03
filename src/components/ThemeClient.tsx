@@ -1,3 +1,5 @@
+// File: src/components/ThemeClient.tsx
+// Description: Provides theme context and global styles for the app using Emotion.
 'use client';
 
 import { useTheme } from '../context/ThemeContext';
