@@ -97,5 +97,41 @@ export const api = {
     if (!res.ok) throw new Error('Failed to post comment');
     return res.json();
   },
+
+  createPost: async (postData: { title: string; content: string; excerpt?: string, tags?: string[], cover_image_url?: string }): Promise<BlogPost> => {
+    const res = await fetch(`${API_URL}/api/blog/posts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify(postData),
+    });
+    if (!res.ok) throw new Error('Failed to create post');
+    return res.json();
+  },
+
+  getMyPosts: async (): Promise<BlogPost[]> => {
+    const res = await fetch(`${API_URL}/api/blog/posts/me`, {
+      headers: getAuthHeaders(),
+      cache: 'no-store', // Don't cache user-specific data
+    });
+    if (!res.ok) throw new Error('Failed to fetch user posts');
+    return res.json();
+  },
+  uploadImage: async (file: File): Promise<{ url: string }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const res = await fetch(`${API_URL}/api/uploads/image`, {
+      method: 'POST',
+      headers: {
+        ...getAuthHeaders(), // Your existing function to get the auth token
+      },
+      body: formData,
+    });
+
+    if (!res.ok) {
+      throw new Error('Image upload failed');
+    }
+    return res.json();
+  },
   // We will add getProjects, getSkills, etc. here in the future.
 };
