@@ -78,6 +78,7 @@ export default function Navbar() {
         {/* 3. Conditionally show Login or Logout */}
         {user ? (
           <>
+            <Link href="/dashboard/write">Write Post</Link>
             <span style={{ fontWeight: 500 }}>{user.username}</span>
             <button onClick={logout}>Logout</button>
           </>
