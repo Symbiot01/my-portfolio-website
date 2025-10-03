@@ -1,3 +1,5 @@
+// File: src/styles/global.ts
+// Description: Global Emotion CSS styles for theming and layout.
 import { css } from '@emotion/react';
 import { ThemeType } from './theme';
 

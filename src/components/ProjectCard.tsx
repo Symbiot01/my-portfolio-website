@@ -1,3 +1,5 @@
+// File: src/components/ProjectCard.tsx
+// Description: Card component to display project details including title, description, stack, and image.
 'use client';
 
 import styled from '@emotion/styled';

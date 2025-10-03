@@ -1,0 +1,2448 @@
+
+==== /home/dev/Projects/my-portfolio-website/src/sections/home/Projects.tsx ====
+
+// File: src/sections/Projects.tsx
+// Description: Projects section with filter and project cards for portfolio work.
+'use client';
+
+import styled from '@emotion/styled';
+import { useState } from 'react';
+import ProjectCard from '../../components/ProjectCard';
+import { motion } from 'framer-motion';
+
+
+declare module '@emotion/react' {
+  export interface Theme {
+    cardBg: string;
+    mutedText: string;
+    titleGradient: string;
+    primary: string;
+    accent: string;
+    text: string;
+    toggleBg: string;
+
+  }
+}
+
+const HeadingWrapper = styled.div`
+  text-align: center;
+  margin-bottom: 3rem;
+`;
+
+const Heading = styled.h2`
+  font-size: 6rem;
+  font-weight: 900;
+  margin-bottom: 1.5rem;
+  margin-left: 4rem;
+
+  background: ${({ theme }) => theme.titleGradient};
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+
+  @media (min-width: 2000px) {
+    font-size: 8rem;
+    margin-left: 6rem;
+  }
+
+  @media (max-width: 1024px) {
+    font-size: 3.5rem;
+    margin-left: 2rem;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 2.5rem;
+    margin-left: 1rem;
+  }
+
+  @media (max-width: 480px) {
+    font-size: 2rem;
+    margin-left: 0.5rem;
+  }
+`;
+
+
+const Subheading = styled.p`
+  color: ${({ theme }) => theme.mutedText};
+  max-width: 600px;
+  margin: 0 auto;
+    @media (min-width: 2000px) {
+    font-size: 1.8rem;
+    margin-left: 6rem;
+  }
+
+  @media (max-width: 1024px) {
+    font-size: 1.4rem;
+    margin-left: 2rem;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 1rem;
+    margin-left: 1rem;
+  }
+
+  @media (max-width: 480px) {
+    font-size: 0.75rem;
+    margin-left: 0.5rem;
+  }
+`;
+
+const Section = styled.section`
+  padding: 4rem 2rem;
+`;
+
+const FilterBar = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 3rem;
+`;
+
+const FilterButton = styled.button<{ active: boolean }>`
+  padding: 0.5rem 1.25rem;
+  background: ${({ active, theme }) => (active ? theme.primary : theme.toggleBg)};
+  color: ${({ active, theme }) => (active ? '#fff' : theme.text)};
+  border: 1px solid ${({ theme }) => theme.border};
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 1.4rem; // base size
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: ${({ theme }) => theme.primary};
+    color: #fff;
+  }
+
+  @media (min-width: 2000px) {
+    font-size: 2rem;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 1.2rem;
+  }
+
+  @media (max-width: 480px) {
+    font-size: 1rem;
+  }
+`;
+
+
+const ProjectsGrid = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3rem;
+  justify-content: space-between;
+
+  @media (min-width: 2000px) {
+    & > * {
+      flex: 1 1 calc(33.33% - 2rem);
+      min-width: 30%;
+    }
+  }
+
+  @media (max-width: 1999px) {
+    & > * {
+      flex: 1 1 calc(50% - 1.5rem);
+      min-width: 40%;
+    }
+  }
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+
+    & > * {
+      flex: 1 1 100%;
+      min-width: 100%;
+    }
+  }
+`;
+
+const MotionCard = styled(motion.div)`
+  @media (min-width: 2000px) {
+    flex: 1 1 calc(33.33% - 2rem);
+    min-width: 30%;
+  }
+
+  @media (max-width: 1999px) {
+    flex: 1 1 calc(50% - 1.5rem);
+    min-width: 40%;
+  }
+
+  @media (max-width: 768px) {
+    flex: 1 1 100%;
+    min-width: 100%;
+  }
+`;
+
+const categories = [
+  'All',
+  'AI/ML & DL',
+  'Computer Vision & Robotics',
+  'Web Dev & Full Stack',
+  'GameDev & AR/VR',
+  'Creative Works',
+];
+
+const sampleProjects = [
+  {
+    title: 'Self-learning Enemy AI in Unity',
+    stack: ['Unity', 'ML-Agents', 'C#'],
+    description: 'A reinforcement learning agent trained to behave like a smart enemy in 3D environments.',
+    image: '/projects/enemy-ai.jpg',
+    category: 'GameDev & AR/VR',
+  },
+  {
+    title: 'OpenCV Object Detection',
+    stack: ['Python', 'OpenCV'],
+    description: 'Real-time object detection system using traditional computer vision techniques.',
+    image: '/projects/object-detection.jpg',
+    category: 'Computer Vision & Robotics',
+  },
+  {
+    title: 'Personal Portfolio',
+    stack: ['Next.js', 'Emotion', 'TypeScript'],
+    description: 'Fully responsive dark/light mode developer portfolio with blog, gallery, and contact.',
+    image: '/projects/portfolio.jpg',
+    category: 'Web Dev & Full Stack',
+  },
+
+];
+export default function Projects() {
+  const [active, setActive] = useState('All');
+
+  const filtered = active === 'All'
+    ? sampleProjects
+    : sampleProjects.filter(p => p.category === active);
+
+  return (
+    <Section id="projects">
+      {/* ... (HeadingWrapper and FilterBar are the same) ... */}
+
+      <ProjectsGrid>
+        {filtered.map((p, i) => (
+          <MotionCard
+            // Use a unique, stable key like the project title
+            key={p.title} 
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: i * 0.1 }}
+          >
+            <ProjectCard
+              // The key prop is removed from the inner component
+              title={p.title}
+              stack={p.stack}
+              description={p.description}
+              image={p.image}
+            />
+          </MotionCard>
+        ))}
+      </ProjectsGrid>
+    </Section>
+  );
+}
+
+==== /home/dev/Projects/my-portfolio-website/src/sections/home/Skills.tsx ====
+
+// File: src/sections/Skills.tsx
+// Description: Skills section with categorized technology icons and names.
+'use client';
+
+import styled from '@emotion/styled';
+import { motion } from 'framer-motion';
+
+import {
+  SiPytorch, SiTensorflow, SiScikitlearn, SiOpencv,
+  SiArduino, SiRaspberrypi, SiRos,
+  SiUnity, SiDotnet,
+  SiReact, SiNextdotjs, SiExpress, SiMongodb,
+  SiBlender, SiFigma, SiAdobephotoshop, SiAdobecreativecloud,
+  SiGit, SiDocker, SiLinux, SiFirebase,
+} from 'react-icons/si';
+
+import { IconType } from 'react-icons';
+
+const Section = styled.section`
+  padding: 4rem 2rem;
+`;
+
+const Title = styled.h2`
+  font-size: 4rem;
+  margin-bottom: 3rem;
+  font-weight: 800;
+  background: ${({ theme }) => theme.titleGradient};
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  text-align: center;
+`;
+const Grid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+
+const Category = styled.div`
+  background: ${({ theme }) => theme.cardBg};
+  border-radius: 1.5rem;
+  padding: 2rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+  border: 1px solid transparent;
+  transition: border 0.3s ease;
+
+  &:hover {
+    border: 1px solid ${({ theme }) => theme.accent};
+  }
+`;
+
+
+const CatTitle = styled.h3`
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  color: ${({ theme }) => theme.accent};
+`;
+
+const SkillsList = styled.ul`
+  list-style: none;
+  padding: 0;
+  margin: 0;
+`;
+
+const SkillItem = styled.li`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+  color: ${({ theme }) => theme.text};
+  transition: all 0.2s ease-in-out;
+
+  svg {
+    width: 1.5rem;
+    height: 1.5rem;
+    transition: transform 0.3s, color 0.3s;
+  }
+
+  &:hover svg {
+    transform: scale(1.2);
+    color: ${({ theme }) => theme.accent};
+  }
+
+  &:hover {
+    font-weight: 600;
+  }
+`;
+
+
+type Skill = {
+  name: string;
+  icon: IconType;
+};
+
+type SkillCategory = {
+  title: string;
+  skills: Skill[];
+};
+
+const data: SkillCategory[] = [
+  {
+    title: 'AI & ML',
+    skills: [
+      { name: 'PyTorch', icon: SiPytorch },
+      { name: 'TensorFlow', icon: SiTensorflow },
+      { name: 'scikit-learn', icon: SiScikitlearn },
+      { name: 'OpenCV', icon: SiOpencv },
+    ],
+  },
+  {
+    title: 'Robotics & Embedded',
+    skills: [
+      { name: 'Arduino', icon: SiArduino },
+      { name: 'Raspberry Pi', icon: SiRaspberrypi },
+      { name: 'ROS', icon: SiRos },
+      { name: 'Sensors', icon: SiArduino },
+    ],
+  },
+  {
+    title: 'GameDev & XR',
+    skills: [
+      { name: 'Unity', icon: SiUnity },
+      { name: 'C#', icon: SiDotnet },
+      { name: 'AR Foundation', icon: SiUnity },
+      { name: 'ML-Agents', icon: SiPytorch },
+    ],
+  },  
+  {
+    title: 'Web Dev',
+    skills: [
+      { name: 'React', icon: SiReact },
+      { name: 'Next.js', icon: SiNextdotjs },
+      { name: 'Express', icon: SiExpress },
+      { name: 'MongoDB', icon: SiMongodb },
+    ],
+  },
+  {
+    title: 'Creative',
+    skills: [
+      { name: 'Blender', icon: SiBlender },
+      { name: 'Figma', icon: SiFigma },
+      { name: 'Photoshop', icon: SiAdobephotoshop },
+      { name: 'Premiere Pro', icon: SiAdobecreativecloud },
+    ],
+  },
+  {
+    title: 'Tools',
+    skills: [
+      { name: 'Git', icon: SiGit },
+      { name: 'Docker', icon: SiDocker },
+      { name: 'Linux', icon: SiLinux },
+      { name: 'Firebase', icon: SiFirebase },
+    ],
+  },
+];
+
+export default function Skills() {
+  return (
+    <Section id="skills">
+      <Title>Skills Overview</Title>
+      <Grid>
+        {data.map((category, index) => (
+          <motion.div
+            key={category.title}
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            whileHover={{ scale: 1.05 }}
+            transition={{ duration: 0.4, delay: index * 0.1,  stiffness: 100 }}
+          >
+            <Category key={category.title}>
+              <CatTitle>{category.title}</CatTitle>
+              <SkillsList>
+                {category.skills.map((skill) => (
+                  <SkillItem key={skill.name}>
+                    <skill.icon />
+                    {skill.name}
+                  </SkillItem>
+                ))}
+              </SkillsList>
+            </Category>
+          </motion.div>
+        ))}
+      </Grid>
+    </Section>
+  );
+}
+
+==== /home/dev/Projects/my-portfolio-website/src/sections/home/Research.tsx ====
+
+// File: src/sections/Research.tsx
+// Description: Research section with papers, notebooks, and courses filter and cards.
+'use client';
+
+import styled from '@emotion/styled';
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { FiBookOpen, FiCode, FiAward } from 'react-icons/fi';
+
+const Section = styled.section`
+  padding: 5rem 2rem;
+  max-width: 1200px;
+  margin: auto;
+`;
+
+const Title = styled.h2`
+  font-size: 3rem;
+  margin-bottom: 2rem;
+  font-weight: 700;
+  text-align: center;
+  background: ${({ theme }) => theme.titleGradient};
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+`;
+
+const FilterBar = styled.div`
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 2.5rem;
+`;
+
+const FilterButton = styled.button<{ active: boolean }>`
+  padding: 0.5rem 1.25rem;
+  background: ${({ active, theme }) => (active ? theme.accent : theme.toggleBg)};
+  color: ${({ active, theme }) => (active ? '#fff' : theme.text)};
+  border: 1px solid ${({ theme }) => theme.border};
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 1rem;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: ${({ theme }) => theme.accent};
+    color: #fff;
+  }
+`;
+
+const Grid = styled.div`
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: repeat(2, 1fr);
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const Card = styled(motion.div)`
+  background: ${({ theme }) => theme.cardBg};
+  backdrop-filter: blur(12px);
+  border-radius: 1.5rem;
+  padding: 2rem;
+  border: 1px solid ${({ theme }) => theme.border};
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  transition: 0.3s ease;
+
+  &:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.12);
+  }
+`;
+
+const CardTitle = styled.h3`
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+`;
+
+const CardDesc = styled.p`
+  font-size: 0.95rem;
+  color: ${({ theme }) => theme.mutedText};
+  line-height: 1.5;
+`;
+
+const IconWrap = styled.div`
+  font-size: 2.25rem;
+  margin-bottom: 1rem;
+  color: ${({ theme }) => theme.accent};
+`;
+
+const categories = ['All', 'Papers', 'Notebooks', 'Courses'];
+
+const items = [
+  {
+    title: 'RLHF Paper Summary',
+    desc: 'Understanding Reinforcement Learning with Human Feedback.',
+    icon: <FiBookOpen />,
+    category: 'Papers',
+  },
+  {
+    title: 'Attention is All You Need',
+    desc: 'Explains the Transformer architecture with self-attention.',
+    icon: <FiBookOpen />,
+    category: 'Papers',
+  },
+  {
+    title: 'DDPG on OpenAI Gym',
+    desc: 'Deep Deterministic Policy Gradient implementation on custom gym env.',
+    icon: <FiCode />,
+    category: 'Notebooks',
+  },
+  {
+    title: 'Image Classification with PyTorch',
+    desc: 'CNN-based image classifier Colab notebook.',
+    icon: <FiCode />,
+    category: 'Notebooks',
+  },
+  {
+    title: 'Deep Learning Specialization',
+    desc: 'Andrew Ng’s 5-part course on Coursera.',
+    icon: <FiAward />,
+    category: 'Courses',
+  },
+  {
+    title: 'CS285: Deep RL',
+    desc: 'Berkeley’s graduate course with assignments and lectures.',
+    icon: <FiAward />,
+    category: 'Courses',
+  },
+];
+
+export default function Research() {
+  const [active, setActive] = useState('All');
+
+  const filteredItems = active === 'All' ? items : items.filter(i => i.category === active);
+
+  return (
+    <Section id="research">
+      <Title>Research & Learning</Title>
+      <FilterBar>
+        {categories.map(cat => (
+          <FilterButton
+            key={cat}
+            active={active === cat}
+            onClick={() => setActive(cat)}
+          >
+            {cat}
+          </FilterButton>
+        ))}
+      </FilterBar>
+
+      <Grid>
+        {filteredItems.map((item, i) => (
+          <Card
+            key={item.title}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: i * 0.1 }}
+          >
+            <IconWrap>{item.icon}</IconWrap>
+            <CardTitle>{item.title}</CardTitle>
+            <CardDesc>{item.desc}</CardDesc>
+          </Card>
+        ))}
+      </Grid>
+    </Section>
+  );
+}
+
+==== /home/dev/Projects/my-portfolio-website/src/sections/home/About.tsx ====
+
+// File: src/sections/About.tsx
+// Description: About section with code-style biography and education details.
+'use client';
+import styled from '@emotion/styled';
+
+declare module '@emotion/react' {
+  export interface Theme {
+    cardBg: string;
+    mutedText: string;
+    titleGradient: string;
+    primary: string;
+    accent: string;
+    text: string;
+    toggleBg: string;
+    background: string;
+
+  }
+}
+const Section = styled.section`
+  padding: 4rem 2rem;
+  background: ${({ theme }) => theme.surface};
+`;
+
+const CodeContainer = styled.div`
+  display: flex;
+  background: ${({ theme }) => theme.background};
+  border-radius: 12px;
+  overflow: hidden;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.95rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  color: ${({ theme }) => theme.text};
+`;
+
+const LineNumbers = styled.pre`
+  background: ${({ theme }) => theme.surface};
+  color: ${({ theme }) => theme.mutedText};
+  padding: 1.5rem 1rem;
+  text-align: right;
+  user-select: none;
+`;
+
+const CodeBlock = styled.pre`
+  padding: 1.5rem 1rem;
+  overflow-x: auto;
+  white-space: pre;
+`;
+
+const Title = styled.h2`
+  font-size: 6rem;
+  font-weight: 900;
+  margin-bottom: 1.5rem;
+  margin-left: 4rem;
+  background: ${({ theme }) => theme.titleGradient};
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+
+  @media (max-width: 1024px) {
+    font-size: 3.5rem;
+    margin-left: 2rem;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 2.5rem;
+    margin-left: 1rem;
+  }
+
+  @media (max-width: 480px) {
+    font-size: 2rem;
+    margin-left: 0.5rem;
+  }
+`;
+
+export default function About() {
+  const codeLines = [
+    '// Bridging AI, Robotics, and Creative Technology',
+    '',
+    'class SahilPatel {',
+    '  constructor() {',
+    '    this.name = "Sahil Patel";',
+    '    this.basedIn = "India";',
+    '    this.email = "sahil9439patel@gmail.com";',
+    '    this.interests = ["AI", "GameDev", "Computer Vision", "Creative Coding"];',
+    '  }',
+    '',
+    '  education() {',
+    '    return [',
+    '      { "2022-2027": "B.Tech + M. Tech — Ocean Engineering and Naval Architecture" },',
+    '      { "2021-2022": "Springer Public School" },',
+    '      { "2019-2020": "Kendriya Vidyalya" },',
+    '      { "Certifications and Coursework": [',
+    '          "Deep Learning Specialization",',
+    '          "Machine Learning Foundations and Application",',
+    '          "AI/ML in Robot Autonomy",',
+    '          "Probability and Statistics",',
+    '          "Programming and Data Structures",',
+    '          "Algorithms",',
+    '          "Computer Graphics",',
+    '          "Computer Organisation and Architecture",',
+    '          "File Organization and Database Management Systems",',
+    '          "Optimization Techniques",',
+    '          "Intro to Cloud Computing"',
+    '        ]',
+    '      }',
+    '    ];',
+    '  }',
+    '',
+    '  skills() {',
+    '    return [',
+    '      "Python", "PyTorch", "TensorFlow", "OpenCV", "ROS",',
+    '      "GLSL", "OpenGL", "C", "C#", "CSS",',
+    '      "Unity", "ML-Agents", "AR Foundation", "Shader Programming",',
+    '      "OpenXR","React", "Next.js", "MongoDB",',
+    '      "Figma", "Blender", "Photoshop", "Premiere Pro",',
+    '      "Git", "Docker", "Firebase", "Linux",',
+    '      "NumPy", "Pandas", "Matplotlib", "Scikit-learn", "Keras"',
+    '    ];',
+    '  }',
+    '',
+    '  hobbies() {',
+    '    return ["Football", "Drawing", "3D Art", "Design", "Tech Experiments", "Mountain Biking"];',
+    '  }',
+    '}',
+  ];
+
+  return (
+    <Section id="about">
+      <Title>About Me</Title>
+      <CodeContainer>
+        <LineNumbers>
+          {codeLines.map((_, i) => String(i + 1).padStart(2, ' ') + '\n')}
+        </LineNumbers>
+        <CodeBlock>
+          {codeLines.join('\n')}
+        </CodeBlock>
+      </CodeContainer>
+    </Section>
+  );
+}
+
+==== /home/dev/Projects/my-portfolio-website/src/sections/home/BlogPreview.tsx ====
+
+// File: src/sections/BlogPreview.tsx
+// Description: Blog preview section showing recent posts and learnings.
+'use client';
+
+import styled from '@emotion/styled';
+import { motion } from 'framer-motion';
+import Lottie from 'lottie-react';
+import blogAnim from '../../../public/lottie/blog.json'; 
+import { useState } from 'react';
+
+const Section = styled.section`
+  padding: 4rem 2rem;
+`;
+
+const Header = styled(motion.div)`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  justify-content: center;
+`;
+
+const Title = styled.h2`
+  font-size: 3rem;
+  font-weight: 700;
+  text-align: center;
+  background: ${({ theme }) => theme.titleGradient};
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  border-bottom: 2px solid #ccc;
+  padding-bottom: 0.5rem;
+`;
+
+const Grid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+`;
+
+const BlogCard = styled(motion.div)`
+  background: none;
+  border: 1px solid #ccc;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  position: relative;
+  overflow: hidden;
+`;
+
+const Avatar = styled.img`
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+`;
+
+const BadgeRow = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+  font-size: 0.75rem;
+`;
+
+const Badge = styled.span`
+  background: #eee;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+`;
+
+const posts = [
+  {
+    title: 'How I Trained an Agent in Unity',
+    excerpt: 'Exploring Unity ML-Agents for intelligent behaviors...',
+    date: 'June 2025',
+    readTime: '4 min',
+    tags: ['AI', 'Unity', 'RL'],
+  },
+  {
+    title: 'Vision Systems with OpenCV',
+    excerpt: 'A walkthrough of object tracking and detection methods...',
+    date: 'May 2025',
+    readTime: '3 min',
+    tags: ['OpenCV', 'Robotics', 'Python'],
+  },
+];
+
+export default function BlogPreview() {
+  const [filter] = useState('All');
+  const filtered = filter === 'All' ? posts : posts.filter(p => p.tags.includes(filter));
+
+  return (
+    <Section>
+      <Header
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.6 }}
+      >
+        <Lottie animationData={blogAnim} style={{ width: 64, height: 64 }} />
+        <Title>Blog & Learnings</Title>
+      </Header>
+
+      <Grid>
+        {filtered.map((post, idx) => (
+          <BlogCard
+            key={idx}
+            whileHover={{ scale: 1.02 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Avatar src="/avatar.png" alt="avatar" />
+            <h3>{post.title}</h3>
+            <BadgeRow>
+              <Badge>{post.date}</Badge>
+              <Badge>{post.readTime}</Badge>
+              {post.tags.map(tag => (
+                <Badge key={tag}>{tag}</Badge>
+              ))}
+            </BadgeRow>
+            <p>{post.excerpt}</p>
+          </BlogCard>
+        ))}
+      </Grid>
+    </Section>
+  );
+}
+==== /home/dev/Projects/my-portfolio-website/src/sections/home/Contact.tsx ====
+
+// File: src/sections/Contact.tsx
+// Description: Contact section with links for email, social, and resume download.
+'use client';
+import styled from '@emotion/styled';
+import Image from 'next/image';
+
+const Section = styled.section`
+  padding: 4rem 2rem;
+`;
+
+const ContactWrapper = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3rem;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
+`;
+
+const Left = styled.div`
+  flex: 1;
+`;
+
+const Right = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+
+  @media (max-width: 768px) {
+    align-items: flex-start;
+  }
+`;
+
+const TitleRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+`;
+
+const Avatar = styled(Image)`
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+`;
+
+const Title = styled.h2`
+  font-size: 3rem;
+  font-weight: 900;
+  margin-bottom: 1.5rem;
+  margin-left: 4rem;
+  background: ${({ theme }) => theme.titleGradient};
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+
+  @media (max-width: 1024px) {
+    font-size: 2.5rem;
+    margin-left: 2rem;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 2rem;
+    margin-left: 1rem;
+  }
+
+  @media (max-width: 480px) {
+    font-size: 1.6rem;
+    margin-left: 0.5rem;
+  }
+`;
+
+
+const Badge = styled.span`
+  font-size: 0.85rem;
+  font-style: italic;
+  color: ${({ theme }) => theme.mutedText};
+  opacity: 0.7;
+  margin-bottom: 0.8rem;
+  display: inline-block;
+`;
+
+const ContactList = styled.ul`
+  list-style: none;
+  padding: 0;
+
+  li {
+    margin-bottom: 0.8rem;
+
+    a {
+      text-decoration: none;
+      color: ${({ theme }) => theme.text};
+      transition: opacity 0.2s ease;
+
+      &:hover {
+        opacity: 0.7;
+      }
+    }
+  }
+`;
+
+const ResumeBox = styled.a`
+  margin-top: 1rem;
+  padding: 0.75rem 1.2rem;
+  border: 2px solid ${({ theme }) => theme.primary};
+  border-radius: 8px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.primary};
+  text-decoration: none;
+  transition: background-color 0.3s, color 0.3s;
+
+  &:hover {
+    background-color: ${({ theme }) => theme.primary};
+    color: #fff;
+  }
+`;
+
+export default function Contact() {
+  return (
+    <Section id="contact">
+      <ContactWrapper>
+        <Left>
+          <TitleRow>
+            <Avatar
+              src="/avatar.gif"
+              alt="Avatar"
+              width={48}
+              height={48}
+            />
+            <Title>Contact</Title>
+          </TitleRow>
+
+          <Badge>💬 Available for freelance/collab</Badge>
+
+          <ContactList>
+            <li>
+              📧 <a href="mailto:sahil9439patel@gmail.com">sahil9439patel@gmail.com</a>
+            </li>
+            <li>
+              💼 <a href="https://www.linkedin.com/in/sahil-patel-21b30a255/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+            </li>
+            <li>
+              💻 <a href="https://github.com/Symbiot01" target="_blank" rel="noopener noreferrer">GitHub</a>
+            </li>
+            <li>
+              🧠 <a href="https://yourportfolio.com" target="_blank" rel="noopener noreferrer">Portfolio</a>
+            </li>
+            <li>
+              🎮 <a href="https://discordapp.com/users/yourid" target="_blank" rel="noopener noreferrer">Discord</a>
+            </li>
+          </ContactList>
+        </Left>
+
+        <Right>
+          <Badge>🎯 Open to Internship Opportunities</Badge>
+          <ResumeBox href="/resume.pdf" download>
+            📄 Download Resume
+          </ResumeBox>
+        </Right>
+      </ContactWrapper>
+    </Section>
+  );
+}
+
+==== /home/dev/Projects/my-portfolio-website/src/sections/home/Hero.tsx ====
+
+// File: src/sections/Hero.tsx
+// Description: Hero section with animated title, roles, and image slider.
+'use client';
+
+import styled from '@emotion/styled';
+import { motion, AnimatePresence } from 'framer-motion';
+import Slider from 'react-slick';
+import Image from 'next/image';
+import 'slick-carousel/slick/slick.css';
+import 'slick-carousel/slick/slick-theme.css';
+import ScrollCue from '@/components/ScrollCue';
+import { useEffect, useState } from 'react';
+
+declare module '@emotion/react' {
+  export interface Theme {
+    cardBg: string;
+    mutedText: string;
+    titleGradient: string;
+    primary: string;
+    accent: string;
+    text: string;
+  }
+}
+
+const HeroContainer = styled.section`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 90vh;
+  gap: 3rem;
+  margin-bottom: 10rem;
+
+  @media (min-width: 2000px) {
+    padding: 6rem 2rem;
+    gap: 4rem;
+  }
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    text-align: center;
+  }
+`;
+
+const Left = styled.div`
+  flex: 1;
+  min-width: 40%;
+  margin-bottom: 4rem;
+
+  @media (max-width: 768px) {
+    min-width: 100%;
+  }
+`;
+
+const Intro = styled.p`
+  font-size: 1.2rem;
+
+  color: ${({ theme }) => theme.mutedText};
+  margin-bottom: 0.5rem;
+  margin-left: 4rem;
+
+  @media (min-width: 2000px) {
+    font-size: 1.75rem;
+  }
+`;
+
+const Title = styled.h1`
+  font-size: 5rem;
+  font-weight: 900;
+  margin-bottom: 1.5rem;
+  margin-left: 4rem;
+  background: ${({ theme }) => theme.titleGradient};
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+
+  @media (min-width: 2000px) {
+    font-size: 7rem;
+  }
+`;
+
+const AnimatedTitle = styled(Title)`
+  animation: pulseText 3s infinite ease-in-out;
+
+  @keyframes pulseText {
+    0% { filter: brightness(1); }
+    50% { filter: brightness(1.3); }
+    100% { filter: brightness(1); }
+  }
+`;
+
+const Subtitle = styled(motion.p)`
+  font-size: 2rem;
+  font-weight: 500;
+  color: ${({ theme }) => theme.text};
+  min-height: 3rem;
+  margin-left: 4rem;
+
+  @media (min-width: 2000px) {
+    font-size: 4rem;
+  }
+`;
+
+const CTAButton = styled.a`
+  display: inline-block;
+  margin-top: 2rem;
+  margin-left: 5rem;
+  padding: 0.75rem 1.5rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  border-radius: 999px;
+  background: ${({ theme }) => theme.primary};
+  color: white;
+  text-decoration: none;
+  transition: background 0.3s ease;
+
+  &:hover {
+    background: ${({ theme }) => theme.accent};
+  }
+`;
+
+const Right = styled.div`
+  flex: 1;
+  min-width: 40%;
+  max-width: 100%;
+  min-height: 360px;
+  margin-bottom: 4rem;
+
+  .slick-slide {
+    display: flex !important;
+    justify-content: center;
+  }
+
+  img {
+    width: 80%;
+    height: auto;
+  }
+
+  @media (max-width: 768px) {
+    min-width: 100%;
+  }
+`;
+
+const ImageCaption = styled.p`
+  text-align: center;
+  margin-top: 0.5rem;
+  font-size: 1rem;
+  color: ${({ theme }) => theme.mutedText};
+`;
+
+const roles = [
+  'ML/DL Engineer',
+  'Developer',
+  'Graphic Programmer',
+  'AR/VR Developer',
+  'Robotics Enthusiast',
+  'Computer Vision Architect',
+  'IoT Hacker',
+  'Creative Technologist',
+];
+
+const images = [
+  '/hero/Project1.jpg',
+  '/hero/Project2.jpg',
+  '/hero/Project3.jpg',
+];
+
+export default function Hero() {
+  const [index, setIndex] = useState(0);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const interval = setInterval(() => {
+      setIndex((prev) => (prev + 1) % roles.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const sliderSettings = {
+    infinite: true,
+    autoplay: true,
+    speed: 1000,
+    slidesToShow: 1,
+    arrows: false,
+    autoplaySpeed: 2000,
+    pauseOnHover: false,
+  };
+
+  return (
+    <HeroContainer id="hero">
+      <ScrollCue />
+      <Left>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.6 }}
+        >
+          <Intro>Welcome to my portfolio</Intro>
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6, duration: 0.6 }}
+        >
+          <AnimatedTitle>Hi, I&apos;m Sahil Patel</AnimatedTitle>
+          <AnimatePresence mode="wait">
+            <Subtitle
+              key={index}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.5 }}
+            >
+              {roles[index]}
+            </Subtitle>
+          </AnimatePresence>
+        </motion.div>
+        <CTAButton href="#projects">View My Work</CTAButton>
+      </Left>
+
+      <Right>
+        {mounted && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            whileHover={{ rotateY: 10, rotateX: 7 }}
+            transition={{ type: 'spring', stiffness: 500 }}
+          >
+            <Slider {...sliderSettings}>
+              {images.map((src, idx) => (
+                <div key={idx} style={{ position: 'relative', width: '100%', height: '100%' }}>
+                  <Image
+                    src={src}
+                    alt={`work-${idx}`}
+                    layout="responsive"
+                    width={4}
+                    height={3}
+                    style={{ objectFit: 'contain' }}
+                    priority
+                  />
+                  <ImageCaption>Project {idx + 1}</ImageCaption>
+                </div>
+              ))}
+            </Slider>
+          </motion.div>
+        )}
+      </Right>
+    </HeroContainer>
+  );
+}
+
+==== /home/dev/Projects/my-portfolio-website/src/sections/home/Gallery.tsx ====
+
+// File: src/sections/Gallery.tsx
+// Description: Gallery section showcasing game demos, renders, and artworks.
+'use client';
+
+import styled from '@emotion/styled';
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import Image from 'next/image';
+
+const Section = styled.section`
+  padding: 4rem 2rem;
+`;
+
+const HeadingWrapper = styled.div`
+  text-align: center;
+  margin-bottom: 3rem;
+`;
+
+const Heading = styled.h2`
+  font-size: 6rem;
+  font-weight: 900;
+  margin-bottom: 1.5rem;
+  margin-left: 4rem;
+  background: ${({ theme }) => theme.titleGradient};
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+
+  @media (max-width: 1024px) {
+    font-size: 3.5rem;
+    margin-left: 2rem;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 2.5rem;
+    margin-left: 1rem;
+  }
+
+  @media (max-width: 480px) {
+    font-size: 2rem;
+    margin-left: 0.5rem;
+  }
+`;
+
+const Subheading = styled.p`
+  color: ${({ theme }) => theme.mutedText};
+  max-width: 600px;
+  margin: 0 auto;
+
+  @media (max-width: 768px) {
+    font-size: 1rem;
+    margin-left: 1rem;
+  }
+
+  @media (max-width: 480px) {
+    font-size: 0.75rem;
+    margin-left: 0.5rem;
+  }
+`;
+
+const FilterBar = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 3rem;
+`;
+
+const FilterButton = styled.button<{ active: boolean }>`
+  padding: 0.5rem 1.25rem;
+  background: ${({ active, theme }) => (active ? theme.primary : theme.toggleBg)};
+  color: ${({ active, theme }) => (active ? '#fff' : theme.text)};
+  border: 1px solid ${({ theme }) => theme.border};
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 1.2rem;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: ${({ theme }) => theme.primary};
+    color: #fff;
+  }
+`;
+
+const GalleryGrid = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3rem;
+  justify-content: space-between;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
+`;
+
+const Card = styled(motion.div)`
+  flex: 1 1 calc(33.33% - 2rem);
+  background: ${({ theme }) => theme.cardBg};
+  border: 1px solid ${({ theme }) => theme.border};
+  border-radius: 1rem;
+  overflow: hidden;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease;
+
+  &:hover {
+    transform: translateY(-6px);
+  }
+
+  img {
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+  }
+
+  h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    padding: 1rem;
+    color: ${({ theme }) => theme.text};
+  }
+
+  @media (max-width: 1024px) {
+    flex: 1 1 calc(50% - 1rem);
+  }
+
+  @media (max-width: 768px) {
+    flex: 1 1 100%;
+  }
+`;
+
+const categories = ['All', 'GameDev', 'Creative', 'Art'];
+
+const galleryItems = [
+  {
+    title: 'Self-learning Enemy AI',
+    category: 'GameDev',
+    image: '/images/unity-ml-soccer.jpg',
+  },
+  {
+    title: 'VR Planet Explorer',
+    category: 'GameDev',
+    image: '/images/vr-planets.jpg',
+  },
+  {
+    title: 'Sci-Fi Corridor Render',
+    category: 'Creative',
+    image: '/images/sci-fi-corridor.jpg',
+  },
+  {
+    title: 'Isometric City',
+    category: 'Creative',
+    image: '/images/isometric-city.jpg',
+  },
+  {
+    title: 'Portrait Sketch',
+    category: 'Art',
+    image: '/images/portrait-sketch.jpg',
+  },
+  {
+    title: 'Colorful Ink Doodle',
+    category: 'Art',
+    image: '/images/ink-doodle.jpg',
+  },
+];
+
+export default function Gallery() {
+  const [active, setActive] = useState('All');
+
+  const filtered = active === 'All'
+    ? galleryItems
+    : galleryItems.filter(item => item.category === active);
+
+  return (
+    <Section id="gallery">
+      <HeadingWrapper>
+        <Heading>Gallery</Heading>
+        <Subheading>
+          A visual showcase of game demos, renders, and original artworks.
+        </Subheading>
+      </HeadingWrapper>
+
+      <FilterBar>
+        {categories.map(cat => (
+          <FilterButton key={cat} active={active === cat} onClick={() => setActive(cat)}>
+            {cat}
+          </FilterButton>
+        ))}
+      </FilterBar>
+
+      <GalleryGrid>
+        {filtered.map((item, i) => (
+          <Card
+            key={i}
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: i * 0.1 }}
+            viewport={{ once: true }}
+          >
+            <Image
+              src={item.image}
+              alt={item.title}
+              width={800}
+              height={520}
+              style={{ width: '100%', height: '220px', objectFit: 'cover' }}
+            />
+            <h3>{item.title}</h3>
+          </Card>
+        ))}
+      </GalleryGrid>
+    </Section>
+  );
+}
+
+==== /home/dev/Projects/my-portfolio-website/src/sections/home/Navbar.tsx ====
+
+// File: src/sections/Navbar.tsx
+// Description: Navigation bar with links to portfolio sections and dark mode toggle.
+'use client';
+import styled from '@emotion/styled';
+import Link from 'next/link';
+import DarkModeToggle from '../../components/DarkModeToggle';
+import { useAuth } from '@/context/AuthContext';
+declare module '@emotion/react' {
+    export interface Theme {
+        cardBg: string;
+        surface: string;
+        text: string;
+        primary: string;
+        border: string;
+        // Add other theme properties here
+    }
+  }
+
+const Nav = styled.nav`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  position: sticky;
+  top: 0;
+  background: ${({ theme }) => theme.surface};
+  border-bottom: 1px solid ${({ theme }) => theme.border};
+  z-index: 50;
+`;
+
+const Logo = styled.div`
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: ${({ theme }) => theme.text};
+`;
+
+const NavLinks = styled.div`
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+
+  a {
+    text-decoration: none;
+    color: ${({ theme }) => theme.text};
+    font-weight: 500;
+
+    &:hover {
+      color: ${({ theme }) => theme.primary};
+    }
+  }
+`;
+
+const RightSection = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+`;
+
+export default function Navbar() {
+  const { user, logout } = useAuth();
+  return (
+    <Nav>
+      <Logo>Symbiot</Logo>
+
+      <NavLinks>
+        <Link href="#hero">Home</Link>
+        <Link href="#projects">Projects</Link>
+        <Link href="#skills">Skills</Link>
+        <Link href="#research">Research</Link>
+        <Link href="#gallery">Gallery</Link>
+        <Link href="blog">Blog</Link>
+        <Link href="#about">About</Link>
+        <Link href="#contact">Contact</Link>
+      </NavLinks>
+
+      <RightSection>
+        <DarkModeToggle />
+        {/* 3. Conditionally show Login or Logout */}
+        {user ? (
+          <>
+            <span style={{ fontWeight: 500 }}>{user.username}</span>
+            <button onClick={logout}>Logout</button>
+          </>
+        ) : (
+          <Link href="/login">Login</Link>
+        )}
+      </RightSection>
+    </Nav>
+  );
+}
+
+==== /home/dev/Projects/my-portfolio-website/src/context/AuthContext.tsx ====
+
+// src/context/AuthContext.tsx
+'use client';
+
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { api } from '../lib/api';
+import { User } from '../types';
+
+type AuthContextType = {
+  user: User | null;
+  login: (email: string, pass: string) => Promise<boolean>;
+  logout: () => void;
+  isLoading: boolean;
+};
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    const checkUser = async () => {
+      try {
+        const currentUser = await api.getMe();
+        setUser(currentUser);
+      } catch (error) {
+        setUser(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    checkUser();
+  }, []);
+
+  const login = async (email: string, pass: string): Promise<boolean> => {
+    try {
+      await api.login(email, pass);
+      const currentUser = await api.getMe();
+      setUser(currentUser);
+      router.push('/');
+      return true;
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
+  };
+
+  const logout = () => {
+    api.logout();
+    setUser(null);
+    router.push('/login');
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+      {!isLoading && children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error('useAuth must be used within an AuthProvider');
+  return context;
+}
+==== /home/dev/Projects/my-portfolio-website/src/context/ThemeContext.tsx ====
+
+// File: src/context/ThemeContext.tsx
+// Description: React context and provider for managing dark/light theme state.
+'use client';
+
+import { createContext, useContext, useState, ReactNode } from 'react';
+
+type ThemeContextType = {
+  isDarkMode: boolean;
+  toggleTheme: () => void;
+};
+
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+
+export function ThemeProvider({ children }: { children: ReactNode }) {
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const toggleTheme = () => setIsDarkMode((prev) => !prev);
+
+  return (
+    <ThemeContext.Provider value={{ isDarkMode, toggleTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
+
+export function useTheme() {
+  const context = useContext(ThemeContext);
+  if (!context) throw new Error('useTheme must be used within ThemeProvider');
+  return context;
+}
+
+==== /home/dev/Projects/my-portfolio-website/src/app/blog/page.tsx ====
+
+// src/app/blog/page.tsx
+'use client'; 
+
+import Link from 'next/link';
+import styled from '@emotion/styled';
+import { api } from '@/lib/api';
+import Navbar from '@/sections/home/Navbar';
+import { format } from 'date-fns';
+
+const BlogContainer = styled.div`
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 4rem 2rem;
+`;
+
+const Header = styled.header`
+  text-align: center;
+  margin-bottom: 3rem;
+`;
+
+const PostCard = styled.div`
+  border: 1px solid #eee;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  transition: box-shadow 0.2s ease;
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+`;
+
+// Note: Because this is now a Client Component, we can't fetch data directly.
+// We must use useEffect to fetch data when the component mounts.
+import { useEffect, useState } from 'react';
+import { BlogPost } from '@/types';
+
+export default function BlogIndexPage() {
+  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        const fetchedPosts = await api.getBlogPosts();
+        setPosts(fetchedPosts);
+      } catch (error) {
+        console.error("Failed to fetch blog posts:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPosts();
+  }, []);
+
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+        <BlogContainer>
+          <p>Loading posts...</p>
+        </BlogContainer>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Navbar />
+      <BlogContainer>
+        <Header>
+          <h1>Digital Journal</h1>
+          <p>Thoughts on AI, Robotics, and Code.</p>
+        </Header>
+        <div>
+          {posts.map((post) => (
+            <Link href={`/blog/${post.slug}`} key={post.id} style={{ textDecoration: 'none', color: 'inherit' }}>
+              <PostCard>
+                <h2>{post.title}</h2>
+                <p style={{ color: '#666', fontSize: '0.9rem' }}>
+                  {format(new Date(post.createdAt), 'MMMM d, yyyy')} by {post.author.username}
+                </p>
+                <p>{post.excerpt}</p>
+              </PostCard>
+            </Link>
+          ))}
+        </div>
+      </BlogContainer>
+    </>
+  );
+}
+==== /home/dev/Projects/my-portfolio-website/src/app/blog/[slug]/page.tsx ====
+
+// src/app/blog/[slug]/page.tsx
+import { api } from '@/lib/api';
+import { notFound } from 'next/navigation';
+import BlogPostClientPage from '@/components/BlogPostClientPage';
+
+export default async function BlogPostPage({ params }: { params: { slug: string } }) {
+  // --- THIS IS THE FIX ---
+  // Await the params promise before using its properties
+  const awaitedParams = await params;
+  // --- END OF FIX ---
+
+  try {
+    // Use the awaited value to fetch the post
+    const post = await api.getPostBySlug(awaitedParams.slug);
+    const comments = await api.getComments(post.id);
+
+    return <BlogPostClientPage post={post} comments={comments} />;
+  } catch (error) {
+    // This will catch the error if the API returns a 404
+    notFound();
+  }
+}
+==== /home/dev/Projects/my-portfolio-website/src/app/layout.tsx ====
+
+// src/app/layout.tsx
+// Description: Root layout component providing theme and global styles.
+import '../styles/globals.css';
+import { Inter } from 'next/font/google';
+import { ThemeProvider } from '../context/ThemeContext';
+import { AuthProvider } from '../context/AuthContext';
+import ThemeClient from '../components/ThemeClient';
+
+const inter = Inter({ subsets: ['latin'] });
+
+export const metadata = { /* ... */ };
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body className={inter.className}>
+        <AuthProvider> {/* 2. Wrap everything */}
+          <ThemeProvider>
+            <ThemeClient>
+              {children}
+            </ThemeClient>
+          </ThemeProvider>
+        </AuthProvider>
+      </body>
+    </html>
+  );
+}
+==== /home/dev/Projects/my-portfolio-website/src/app/page.tsx ====
+
+// src/app/page.tsx
+// File: src/app/page.tsx
+// Description: Main homepage component assembling all portfolio sections.
+'use client';
+
+import Navbar from '@/sections/home/Navbar';
+import Hero from '../sections/home/Hero';
+import Projects from '../sections/home/Projects';
+import Skills from '../sections/home/Skills';
+import Research from '../sections/home/Research';
+import Gallery from '../sections/home/Gallery';
+import BlogPreview from '../sections/home/BlogPreview';
+import About from '../sections/home/About';
+import Contact from '../sections/home/Contact';
+
+export default function HomePage() {
+  return (
+    <main>
+      <Navbar />
+      <Hero />
+      <Projects />
+      <Skills />
+      <Research />
+      <BlogPreview />
+      <Gallery />
+      <About />
+      <Contact />
+    </main>
+  );
+}
+==== /home/dev/Projects/my-portfolio-website/src/app/login/page.tsx ====
+
+// src/app/login/page.tsx
+'use client';
+
+import { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import styled from '@emotion/styled';
+import Navbar from '@/sections/home/Navbar';
+
+const LoginContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 2rem;
+`;
+
+const Form = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 2.5rem;
+  background: ${({ theme }) => theme.cardBg};
+  border: 1px solid ${({ theme }) => theme.border};
+  border-radius: 12px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 8px 32px 0 rgba(0,0,0,0.1);
+`;
+// ... Add Input and Button styles from your previous login page design ...
+
+export default function LoginPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const { login } = useAuth();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const success = await login(email, password);
+    if (!success) {
+      alert('Login failed. Please check your credentials.');
+    }
+  };
+
+  return (
+    <>
+      <Navbar />
+      <LoginContainer>
+        <Form onSubmit={handleSubmit}>
+          <h2 style={{ textAlign: 'center' }}>Sign In</h2>
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+          <button type="submit">Login</button>
+        </Form>
+      </LoginContainer>
+    </>
+  );
+}
+==== /home/dev/Projects/my-portfolio-website/src/components/ThemeClient.tsx ====
+
+// File: src/components/ThemeClient.tsx
+// Description: Provides theme context and global styles for the app using Emotion.
+'use client';
+
+import { useTheme } from '../context/ThemeContext';
+import { ThemeProvider as EmotionThemeProvider, Global } from '@emotion/react';
+import { lightTheme, darkTheme } from '../styles/theme';
+import { globalStyles } from '../styles/global'; // <- importing the styles
+
+
+import 'slick-carousel/slick/slick.css';
+import 'slick-carousel/slick/slick-theme.css';
+
+export default function ThemeClient({ children }: { children: React.ReactNode }) {
+  const { isDarkMode } = useTheme();
+  const currentTheme = isDarkMode ? darkTheme : lightTheme;
+
+  return (
+    <EmotionThemeProvider theme={currentTheme}>
+      <Global styles={globalStyles(currentTheme)} />
+      {children}
+    </EmotionThemeProvider>
+  );
+}
+
+==== /home/dev/Projects/my-portfolio-website/src/components/CommentsSection.tsx ====
+
+// src/components/CommentsSection.tsx
+'use client';
+
+import { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { api } from '@/lib/api';
+import { Comment } from '@/types';
+import { format } from 'date-fns';
+
+export default function CommentsSection({ initialComments, postId }: { initialComments: Comment[], postId: string }) {
+  const { user } = useAuth();
+  const [comments, setComments] = useState(initialComments);
+  const [newComment, setNewComment] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim() || !user) return;
+
+    try {
+      const postedComment = await api.postComment(postId, newComment);
+      // Add the new comment to the top of the list for instant UI update
+      setComments([postedComment, ...comments]);
+      setNewComment('');
+    } catch (error) {
+      alert('Failed to post comment.');
+    }
+  };
+
+  return (
+    <section>
+      <h3>Comments</h3>
+      {user ? (
+        <form onSubmit={handleSubmit}>
+          <textarea
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            placeholder="Write a comment..."
+            rows={4}
+            required
+          />
+          <button type="submit">Post Comment</button>
+        </form>
+      ) : (
+        <p>Please <a href="/login">log in</a> to post a comment.</p>
+      )}
+      <div>
+        {comments.map((comment) => (
+          <div key={comment.id} style={{ borderBottom: '1px solid #eee', padding: '1rem 0' }}>
+            <p>{comment.content}</p>
+            <small>
+              <strong>{comment.author.username}</strong> on {format(new Date(comment.createdAt), 'PPpp')}
+            </small>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+==== /home/dev/Projects/my-portfolio-website/src/components/MarkdownRenderer.tsx ====
+
+// src/components/MarkdownRenderer.tsx
+'use client';
+
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+
+export default function MarkdownRenderer({ content }: { content: string }) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        // --- THIS IS THE FIX ---
+        // We add `ref` to the destructured props here to capture and ignore it.
+        code({ node, className, children, ref, ...props }) {
+        // --- END OF FIX ---
+          const match = /language-(\w+)/.exec(className || '');
+          return match ? (
+            <SyntaxHighlighter
+              style={oneDark as any}
+              language={match[1]}
+              PreTag="div"
+              // The `...props` being spread here no longer contain the problematic `ref`.
+              {...props}
+            >
+              {String(children).replace(/\n$/, '')}
+            </SyntaxHighlighter>
+          ) : (
+            <code className={className} {...props}>
+              {children}
+            </code>
+          );
+        },
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  );
+}
+==== /home/dev/Projects/my-portfolio-website/src/components/ScrollCue.tsx ====
+
+// File: src/components/ScrollCue.tsx
+// Description: Animated scroll cue indicator for prompting users to scroll down.
+'use client';
+
+import styled from '@emotion/styled';
+import { ChevronDown } from 'lucide-react';
+import { keyframes } from '@emotion/react';
+
+const spin = keyframes`
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+`;
+
+const ScrollCueWrapper = styled.div`
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 80px;
+
+  @media (min-width: 2000px) {
+    width: 140px;
+    height: 140px;
+  }
+`;
+
+const CircleText = styled.div`
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  font-size: 0.5rem;
+  font-weight: 500;
+  color: ${({ theme }) => theme.mutedText};
+  animation: ${spin} 8s linear infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+
+  @media (min-width: 2000px) {
+    font-size: 0.65rem;
+  }
+
+  svg {
+    margin-top: -2px;
+  }
+`;
+
+const RotatingText = styled.div`
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+
+  span {
+    display: inline-block;
+    position: absolute;
+    left: 50%;
+    transform-origin: 0 40px;
+
+    @media (min-width: 2000px) {
+      transform-origin: 0 70px;
+    }
+  }
+`;
+
+const ChevronWrapper = styled.div`
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+`;
+
+type ScrollCueProps = {
+  text?: string;
+};
+
+export default function ScrollCue({ text = '• Scroll Down • Scroll Down •' }: ScrollCueProps) {
+  return (
+    <ScrollCueWrapper>
+      <CircleText>
+        <RotatingText>
+          {text.split('').map((char, i) => (
+            <span
+              key={i}
+              style={{
+                transform: `rotate(${i * (360 / text.length)}deg)`,
+              }}
+            >
+              {char}
+            </span>
+          ))}
+        </RotatingText>
+      </CircleText>
+      <ChevronWrapper>
+        <ChevronDown size={28} />
+      </ChevronWrapper>
+    </ScrollCueWrapper>
+  );
+}
+
+==== /home/dev/Projects/my-portfolio-website/src/components/BlogPostClientPage.tsx ====
+
+// src/components/BlogPostClientPage.tsx
+'use client'; // This marks the component as a Client Component
+
+import styled from '@emotion/styled';
+import Navbar from '@/sections/home/Navbar';
+import MarkdownRenderer from '@/components/MarkdownRenderer';
+import CommentsSection from '@/components/CommentsSection';
+import { BlogPost, Comment } from '@/types'; // Import your types
+
+// Move your styled component here
+const PostContainer = styled.article`
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 4rem 2rem;
+  
+  // Basic styles for rendered markdown
+  h1, h2, h3 { margin: 1.5rem 0 1rem; }
+  p { line-height: 1.7; }
+  pre { border-radius: 8px; }
+`;
+
+interface Props {
+  post: BlogPost;
+  comments: Comment[];
+}
+
+export default function BlogPostClientPage({ post, comments }: Props) {
+  return (
+    <>
+      <Navbar />
+      <PostContainer>
+        <header>
+          <h1>{post.title}</h1>
+          <p>By {post.author.username}</p>
+        </header>
+        
+        <MarkdownRenderer content={post.content} />
+        
+        <hr style={{ margin: '3rem 0' }} />
+        
+        <CommentsSection initialComments={comments} postId={post.id} />
+      </PostContainer>
+    </>
+  );
+}
+==== /home/dev/Projects/my-portfolio-website/src/components/DarkModeToggle.tsx ====
+
+// File: src/components/DarkModeToggle.tsx
+// Description: Toggle button for switching between dark and light mode.
+import { useTheme } from '../context/ThemeContext';
+
+export default function DarkModeToggle() {
+  const { isDarkMode, toggleTheme } = useTheme();
+
+  return (
+    <button onClick={toggleTheme}>
+      {isDarkMode ? '🌞 Light' : '🌙 Dark'}
+    </button>
+  );
+}
+
+==== /home/dev/Projects/my-portfolio-website/src/components/ProjectCard.tsx ====
+
+// File: src/components/ProjectCard.tsx
+// Description: Card component to display project details including title, description, stack, and image.
+'use client';
+
+import styled from '@emotion/styled';
+import Image from 'next/image';
+
+const Card = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 4rem;
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
+
+  @media (min-width: 2000px) {
+    margin-bottom: 6rem;
+  }
+`;
+
+const TextContainer = styled.div`
+  flex: 1;
+  padding: 2rem 2rem 2rem 2rem;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+
+  @media (min-width: 2000px) {
+    padding: 4rem;
+  }
+`;
+
+const Title = styled.h3`
+  font-size: 2rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 3px solid ${({ theme }) => theme.accent};
+  text-align: right;
+  position: relative;
+  z-index: 3;
+  transform: translate(30%, 0);
+
+  @media (max-width: 768px) {
+    transform: none;
+    text-align: center;
+    font-size: 1.8rem;
+    margin-bottom: 1.5rem;
+  }
+
+  @media (min-width: 2000px) {
+    font-size: 3.5rem;
+    margin-bottom: 2rem;
+  }
+`;
+
+const Stack = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  margin-right: 6%;
+  justify-content: flex-end;
+
+  span {
+    background: ${({ theme }) => theme.accent};
+    color: #fff;
+    font-size: 0.9rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+
+    @media (min-width: 2000px) {
+      font-size: 1.4rem;
+      padding: 0.4rem 1rem;
+    }
+  }
+
+  @media (max-width: 768px) {
+    justify-content: center;
+    margin-right: 0;
+    font-size: 0.7rem;
+  }
+`;
+
+const Description = styled.p`
+  font-size: 1.2rem;
+  color: ${({ theme }) => theme.mutedText};
+  max-width: 600px;
+  text-align: right;
+  margin-left: auto;
+  margin-right: 6%;
+
+  @media (max-width: 768px) {
+    text-align: center;
+    margin: 0 auto;
+    font-size: 0.9rem;
+  }
+
+  @media (min-width: 2000px) {
+    font-size: 1.8rem;
+    max-width: 800px;
+  }
+`;
+
+const ImageWrapper = styled.div`
+  flex: 1;
+  position: relative;
+  height: 500px;
+  min-width: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateX(-50px);
+  z-index: 1;
+
+  @media (max-width: 768px) {
+    transform: none;
+    width: 100%;
+    height: 400px;
+  }
+
+  @media (min-width: 2000px) {
+    height: 600px;
+  }
+`;
+
+const StyledImage = styled(Image)`
+  border-radius: 0.75rem;
+  object-fit: contain;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+`;
+
+
+
+type Props = {
+  title: string;
+  description: string;
+  stack: string[];
+  image: string;
+};
+
+export default function ProjectCard({ title, description, stack, image }: Props) {
+  return (
+    <Card>
+      <TextContainer>
+        <Title>{title}</Title>
+        <Stack>
+          {stack.map((tech, i) => (
+            <span key={i}>{tech}</span>
+          ))}
+        </Stack>
+        <Description>{description}</Description>
+      </TextContainer>
+
+      <ImageWrapper>
+        <StyledImage
+          src={image}
+          alt={title}
+          fill
+          sizes="(max-width: 768px) 100vw, 50vw"
+        />
+        {/* <ImageOverlay /> */}
+      </ImageWrapper>
+    </Card>
+  );
+}
