@@ -9,7 +9,7 @@ import { TiptapImageUpload } from '@/lib/tiptapImageUpload';
 
 // Import all the extensions we need for a rich editing experience
 import { TextAlign } from '@tiptap/extension-text-align';
-import  TextStyle  from '@tiptap/extension-text-style';
+import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
 import { FontFamily } from '@tiptap/extension-font-family';
 import { Image } from '@tiptap/extension-image';
@@ -188,7 +188,7 @@ export default function EditorComponent({ initialTitle = '', initialContent = ''
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({ image: false, codeBlock: {} }),
+      StarterKit.configure({ codeBlock: {} }),
       Link.configure({ openOnClick: false }),
       TiptapImageUpload,
       TextAlign.configure({ types: ['heading', 'paragraph', 'image'] }),
@@ -201,7 +201,7 @@ export default function EditorComponent({ initialTitle = '', initialContent = ''
           return { ...this.parent?.(), 'data-align': { default: 'center' }, 'data-size': { default: 'large' } };
         },
       }).configure({ inline: true, allowBase64: false }),
-      YouTube.configure({ controls: true, modestBranding: true, width: '100%' }),
+      YouTube.configure({ controls: true, modestBranding: true }),
     ],
     content: initialContent,
     immediatelyRender: false,
