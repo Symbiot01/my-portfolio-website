@@ -15,8 +15,10 @@ import {
   ExpenseRead,
   SettlementCreate,
   SettlementUpdate,
+  SettlementRead,
   BalanceEntry,
   LinkExpiryUpdate,
+  TripLinkInfo,
 } from '@/types'; 
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -283,7 +285,7 @@ export const api = {
   },
 
   // Settlements
-  listSettlements: async (tripId: string): Promise<SettlementUpdate[]> => {
+  listSettlements: async (tripId: string): Promise<SettlementRead[]> => {
     const res = await fetch(`${API_URL}/api/tripsync/${tripId}/settlements`, {
       headers: { ...getAuthHeaders() },
       cache: 'no-store',
@@ -319,12 +321,22 @@ export const api = {
   },
 
   // Share Links
-  rotateLink: async (tripId: string): Promise<void> => {
+  getLink: async (tripId: string): Promise<TripLinkInfo> => {
+    const res = await fetch(`${API_URL}/api/tripsync/${tripId}/link`, {
+      headers: { ...getAuthHeaders() },
+      cache: 'no-store',
+    });
+    if (!res.ok) throw new Error('Failed to get link');
+    return res.json();
+  },
+
+  rotateLink: async (tripId: string): Promise<{ secret_access_url: string }> => {
     const res = await fetch(`${API_URL}/api/tripsync/${tripId}/rotate-link`, {
       method: 'POST',
       headers: { ...getAuthHeaders() },
     });
     if (!res.ok) throw new Error('Failed to rotate link');
+    return res.json();
   },
 
   revokeLink: async (tripId: string): Promise<void> => {

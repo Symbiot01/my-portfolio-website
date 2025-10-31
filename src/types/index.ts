@@ -95,12 +95,23 @@ export interface SettlementCreate {
   payer_member_id: string;
   payee_member_id: string;
   amount: number;
+  mode?: 'cash' | 'upi' | 'card';
 }
 
 export interface SettlementUpdate {
   payer_member_id?: string | null;
   payee_member_id?: string | null;
   amount?: number | null;
+  mode?: 'cash' | 'upi' | 'card' | null;
+}
+
+export interface SettlementRead {
+  id: string;
+  payer_member_id: string;
+  payee_member_id: string;
+  amount: number;
+  mode: 'cash' | 'upi' | 'card';
+  created_at?: string; // ISO datetime
 }
 
 export interface BalanceEntry {
@@ -110,4 +121,11 @@ export interface BalanceEntry {
 
 export interface LinkExpiryUpdate {
   link_expires_at?: string | null; // ISO datetime
+}
+
+export interface TripLinkInfo {
+  secret_access_url: string;
+  link_revoked: boolean;
+  link_expires_at?: string | null; // ISO datetime
+  access_token_version: number;
 }
