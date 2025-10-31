@@ -1,5 +1,9 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+> /home/dev/Projects/my-portfolio-website/cachejs.txt
+find /home/dev/Projects/my-portfolio-website/src -type f \( -name "*.js" -o -name "*.jsx" -o -name "*.tsx"   \) -exec sh -c 'echo "\n==== {} ====\n" >> /home/dev/Projects/my-portfolio-website/cachejs.txt && cat "{}" >> /home/dev/Projects/my-portfolio-website/cachejs.txt' \;
+
+
 ## Getting Started
 
 First, run the development server:
