@@ -5,7 +5,7 @@ import styled from '@emotion/styled';
 import Navbar from '@/sections/home/Navbar';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
-import { BalanceEntry, ItineraryItemCreate, TripRead } from '@/types';
+import { BalanceEntry, ItineraryItemCreate, TripRead, TripLinkInfo } from '@/types';
 import MembersSection from '@/components/tripsync/MembersSection';
 import ExpensesSection from '@/components/tripsync/ExpensesSection';
 import { mockTrip, mockExpenses, mockBalances, MockExpense } from '@/lib/mockData';
@@ -192,6 +192,7 @@ export default function TripDetailPage({ params }: Props) {
   const [itinerary, setItinerary] = useState<ItineraryItemCreate[]>([]);
   const [expenses, setExpenses] = useState<MockExpense[]>([]);
   const [balances, setBalances] = useState<BalanceEntry[]>([]);
+  const [linkInfo, setLinkInfo] = useState<TripLinkInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -213,6 +214,15 @@ export default function TripDetailPage({ params }: Props) {
         setExpenses(mappedExpenses);
         const b = await api.getBalances(params.tripId);
         setBalances(b);
+        
+        // Fetch link info
+        try {
+          const link = await api.getLink(params.tripId);
+          setLinkInfo(link);
+        } catch (e) {
+          console.error('Failed to fetch link info:', e);
+          // Link info might not be available if user is not a linked member
+        }
       } catch (e) {
         console.error('API Error, falling back to mock data:', e);
         // Fallback to mock data if API fails
@@ -336,33 +346,102 @@ export default function TripDetailPage({ params }: Props) {
 
               {activeSection === 'share' && (
                 <div>
-                  {trip?.secret_access_url ? (
-                    <div style={{ wordBreak: 'break-all', marginBottom: '1rem' }}>
-                      {trip.secret_access_url}
-                    </div>
+                  {linkInfo ? (
+                    <>
+                      <div style={{ marginBottom: '1.5rem' }}>
+                        <h3 style={{ marginBottom: '0.5rem', fontSize: '1rem', fontWeight: 600 }}>Access Link</h3>
+                        <div
+                          style={{
+                            padding: '1rem',
+                            background: 'var(--card-bg)',
+                            border: '1px solid var(--border)',
+                            borderRadius: '3px',
+                            wordBreak: 'break-all',
+                            fontFamily: 'monospace',
+                            fontSize: '0.85rem',
+                            marginBottom: '0.75rem',
+                          }}
+                        >
+                          {linkInfo.secret_access_url}
+                        </div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--muted-text)', marginBottom: '1rem' }}>
+                          <div>Status: {linkInfo.link_revoked ? <span style={{ color: '#E74C3C' }}>Revoked</span> : <span style={{ color: '#27AE60' }}>Active</span>}</div>
+                          {linkInfo.link_expires_at && (
+                            <div>
+                              Expires: {new Date(linkInfo.link_expires_at).toLocaleString()}
+                            </div>
+                          )}
+                          <div>Version: {linkInfo.access_token_version}</div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <button
+                          onClick={async () => {
+                            try {
+                              const result = await api.rotateLink(params.tripId);
+                              // Refresh link info
+                              const link = await api.getLink(params.tripId);
+                              setLinkInfo(link);
+                              const t = await api.getTrip(params.tripId);
+                              setTrip(t);
+                              alert('Link rotated successfully!');
+                            } catch (error) {
+                              console.error('Failed to rotate link:', error);
+                              alert('Failed to rotate link. Please try again.');
+                            }
+                          }}
+                          disabled={linkInfo.link_revoked}
+                          style={{
+                            padding: '0.6rem 1rem',
+                            borderRadius: '3px',
+                            border: 'none',
+                            background: 'var(--primary)',
+                            color: 'white',
+                            cursor: 'pointer',
+                            fontSize: '0.9rem',
+                            fontWeight: 600,
+                          }}
+                        >
+                          Rotate Link
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (confirm('Are you sure you want to revoke this link? It will no longer be accessible.')) {
+                              try {
+                                await api.revokeLink(params.tripId);
+                                // Refresh link info
+                                const link = await api.getLink(params.tripId);
+                                setLinkInfo(link);
+                                const t = await api.getTrip(params.tripId);
+                                setTrip(t);
+                                alert('Link revoked successfully!');
+                              } catch (error) {
+                                console.error('Failed to revoke link:', error);
+                                alert('Failed to revoke link. Please try again.');
+                              }
+                            }
+                          }}
+                          style={{
+                            padding: '0.6rem 1rem',
+                            borderRadius: '3px',
+                            border: '1px solid var(--border)',
+                            background: linkInfo.link_revoked ? 'transparent' : '#E74C3C',
+                            color: linkInfo.link_revoked ? 'var(--text)' : 'white',
+                            cursor: 'pointer',
+                            fontSize: '0.9rem',
+                            fontWeight: 600,
+                            opacity: linkInfo.link_revoked ? 0.6 : 1,
+                          }}
+                        >
+                          {linkInfo.link_revoked ? 'Link Revoked' : 'Revoke Link'}
+                        </button>
+                      </div>
+                    </>
                   ) : (
-                    <p>No active link</p>
+                    <div>
+                      <p>Link information not available. You may need to be a linked member to manage access links.</p>
+                    </div>
                   )}
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button
-                      onClick={async () => {
-                        await api.rotateLink(params.tripId);
-                        const t = await api.getTrip(params.tripId);
-                        setTrip(t);
-                      }}
-                    >
-                      Rotate Link
-                    </button>
-                    <button
-                      onClick={async () => {
-                        await api.revokeLink(params.tripId);
-                        const t = await api.getTrip(params.tripId);
-                        setTrip(t);
-                      }}
-                    >
-                      Revoke Link
-                    </button>
-                  </div>
                 </div>
               )}
             </div>

@@ -279,14 +279,6 @@
 
   **Response:** `TripRead`
 
-  ### GET `/api/tripsync/{trip_id}`
-
-  Get trip details.
-
-  **Authentication:** Required (must be a member or have access token)
-
-  **Response:** `TripRead`
-
   ### POST `/api/tripsync/{trip_id}/members`
 
   Add a member to a trip.
@@ -478,7 +470,8 @@ Get a single settlement by ID for editing.
   "id": "507f1f77bcf86cd799439011",
   "payer_member_id": "uuid-string-1",
   "payee_member_id": "uuid-string-2",
-  "amount": 50.00
+  "amount": 50.00,
+  "mode": "upi"
 }
 ```
 
@@ -527,6 +520,22 @@ List all settlements for a trip.
 
   **Response:** `List[BalanceEntry]`
 
+  ### GET `/api/tripsync/{trip_id}/link`
+
+  Get the current access link for a trip.
+
+  **Authentication:** Required (must be a linked member)
+
+  **Response:** `TripLinkInfo`
+  ```json
+  {
+    "secret_access_url": "http://localhost:8000/api/tripsync/access/{token}",
+    "link_revoked": false,
+    "link_expires_at": "2024-12-31T23:59:59",
+    "access_token_version": 1
+  }
+  ```
+
   ### POST `/api/tripsync/{trip_id}/rotate-link`
 
   Rotate the access token for a trip.
@@ -562,6 +571,14 @@ List all settlements for a trip.
     "link_expires_at": "2024-12-31T23:59:59"
   }
   ```
+
+  ### GET `/api/tripsync/{trip_id}`
+
+  Get trip details.
+
+  **Authentication:** Required (must be a member or have access token)
+
+  **Response:** `TripRead`
 
   ---
 
@@ -831,7 +848,8 @@ List all settlements for a trip.
   {
     "payer_member_id": "uuid-string-1",
     "payee_member_id": "uuid-string-2",
-    "amount": 50.00
+    "amount": 50.00,
+    "mode": "upi"
   }
   ```
 
@@ -839,17 +857,23 @@ List all settlements for a trip.
   - `payer_member_id` (string, required)
   - `payee_member_id` (string, required)
   - `amount` (float, required)
+  - `mode` (string, optional, default: "upi"): Payment mode - must be one of "cash", "upi", or "card"
 
   #### SettlementUpdate
   ```json
   {
     "payer_member_id": "uuid-string-1",
     "payee_member_id": "uuid-string-2",
-    "amount": 50.00
+    "amount": 50.00,
+    "mode": "card"
   }
   ```
 
-  All fields are optional.
+  **Fields:** All fields are optional.
+  - `payer_member_id` (string, optional)
+  - `payee_member_id` (string, optional)
+  - `amount` (float, optional)
+  - `mode` (string, optional): Payment mode - must be one of "cash", "upi", or "card"
 
   #### SettlementRead
   ```json
@@ -857,9 +881,17 @@ List all settlements for a trip.
     "id": "507f1f77bcf86cd799439011",
     "payer_member_id": "uuid-string-1",
     "payee_member_id": "uuid-string-2",
-    "amount": 50.00
+    "amount": 50.00,
+    "mode": "upi"
   }
   ```
+
+  **Fields:**
+  - `id` (string): Settlement ID
+  - `payer_member_id` (string): Member ID of the payer
+  - `payee_member_id` (string): Member ID of the payee
+  - `amount` (float): Settlement amount
+  - `mode` (string): Payment mode - "cash", "upi", or "card"
 
   #### BalanceEntry
   ```json
@@ -882,6 +914,22 @@ List all settlements for a trip.
 
   **Fields:**
   - `link_expires_at` (datetime, optional)
+
+  #### TripLinkInfo
+  ```json
+  {
+    "secret_access_url": "http://localhost:8000/api/tripsync/access/{token}",
+    "link_revoked": false,
+    "link_expires_at": "2024-12-31T23:59:59",
+    "access_token_version": 1
+  }
+  ```
+
+  **Fields:**
+  - `secret_access_url` (string): The full URL to access the trip without authentication
+  - `link_revoked` (boolean): Whether the link has been revoked
+  - `link_expires_at` (datetime, optional): When the link expires (null if no expiry)
+  - `access_token_version` (integer): The version number of the access token (increments on rotation)
 
   ---
 
