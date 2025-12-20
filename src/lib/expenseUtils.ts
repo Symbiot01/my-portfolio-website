@@ -11,6 +11,7 @@ export const formatCurrency = (amount: number): string => {
 
 export const formatRelativeDate = (dateString: string): string => {
   const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return 'Just now';
   const now = new Date();
   const diffInMs = now.getTime() - date.getTime();
   const diffInHours = diffInMs / (1000 * 60 * 60);
@@ -32,6 +33,7 @@ export const formatRelativeDate = (dateString: string): string => {
 
 export const getDateGroupLabel = (dateString: string): string => {
   const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return 'Today';
   const now = new Date();
   const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
 
@@ -59,7 +61,15 @@ export const calculateSplitAmount = (
 };
 
 interface OptimizedSettlement {
+  /**
+   * Member who OWES money (debtor) and should PAY in a settlement.
+   * In the UI/API this maps to `payer_member_id`.
+   */
   from: string;
+  /**
+   * Member who IS OWED money (creditor) and should RECEIVE in a settlement.
+   * In the UI/API this maps to `payee_member_id`.
+   */
   to: string;
   amount: number;
 }

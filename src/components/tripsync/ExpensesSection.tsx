@@ -32,6 +32,11 @@ const GridContainer = styled.div`
   gap: 0.5rem;
   height: calc(100vh - 300px);
   min-height: 600px;
+
+  @media (max-width: 768px) {
+    height: auto;
+    min-height: 0;
+  }
 `;
 
 const PanelSection = styled.div`
@@ -59,6 +64,10 @@ const PanelSection = styled.div`
 
   &::-webkit-scrollbar-thumb:hover {
     background: ${({ theme }) => theme.mutedText};
+  }
+
+  @media (max-width: 768px) {
+    padding: 0.75rem;
   }
 `;
 
@@ -337,12 +346,23 @@ const TableHeader = styled.th<{ sortable?: boolean }>`
   &:hover {
     color: ${({ theme, sortable }) => sortable && theme.text};
   }
+
+  @media (max-width: 768px) {
+    padding: 0.55rem 0.6rem;
+    font-size: 0.7rem;
+    letter-spacing: 0.35px;
+  }
 `;
 
 const TableCell = styled.td`
   padding: 0.85rem 1rem;
   font-size: 0.9rem;
   color: ${({ theme }) => theme.text};
+
+  @media (max-width: 768px) {
+    padding: 0.65rem 0.6rem;
+    font-size: 0.82rem;
+  }
 `;
 
 const MemberNameCell = styled.div`
@@ -350,6 +370,10 @@ const MemberNameCell = styled.div`
   align-items: center;
   gap: 0.6rem;
   font-weight: 600;
+
+  @media (max-width: 768px) {
+    gap: 0.5rem;
+  }
 `;
 
 const MemberAvatar = styled.div`
@@ -363,6 +387,12 @@ const MemberAvatar = styled.div`
   justify-content: center;
   font-weight: 700;
   font-size: 0.85rem;
+
+  @media (max-width: 768px) {
+    width: 26px;
+    height: 26px;
+    font-size: 0.75rem;
+  }
 `;
 
 const BalanceAmount = styled.div<{ balance: number }>`
@@ -372,6 +402,11 @@ const BalanceAmount = styled.div<{ balance: number }>`
   display: flex;
   align-items: center;
   gap: 0.5rem;
+
+  @media (max-width: 768px) {
+    font-size: 1.05rem;
+    gap: 0.35rem;
+  }
 `;
 
 const BalanceBadge = styled.span<{ type: 'owed' | 'owes' | 'settled' }>`
@@ -657,11 +692,21 @@ const SettlementHeader = styled.th`
   letter-spacing: 0.5px;
   background: ${({ theme }) => theme.cardBg};
   border-bottom: 1px solid ${({ theme }) => theme.border};
+
+  @media (max-width: 768px) {
+    padding: 0.45rem 0.55rem;
+    font-size: 0.68rem;
+    letter-spacing: 0.35px;
+  }
 `;
 
 const SettlementDate = styled.span`
   font-size: 0.75rem;
   color: ${({ theme }) => theme.mutedText};
+
+  @media (max-width: 768px) {
+    font-size: 0.7rem;
+  }
 `;
 
 const SettleButton = styled.button`
@@ -710,6 +755,11 @@ const EditableAmountInput = styled.input`
     opacity: 1;
     cursor: pointer;
   }
+
+  @media (max-width: 768px) {
+    width: 80px;
+    font-size: 0.8rem;
+  }
 `;
 
 const EditableSelect = styled.select`
@@ -740,6 +790,122 @@ const EditableSelect = styled.select`
   &:hover {
     border-color: ${({ theme }) => theme.primary}80;
   }
+
+  @media (max-width: 768px) {
+    min-width: 92px;
+    max-width: 120px;
+    font-size: 0.75rem;
+  }
+`;
+
+// Mobile-first settlement cards (used to avoid table overflow on phones)
+const SettlementCards = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+`;
+
+const SettlementCard = styled.div`
+  border: 1px solid ${({ theme }) => theme.border};
+  background: ${({ theme }) => theme.background};
+  border-radius: 12px;
+  padding: 0.75rem;
+`;
+
+const SettlementCardTitle = styled.div`
+  font-weight: 800;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  color: ${({ theme }) => theme.text};
+`;
+
+const SettlementCardGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+
+  @media (max-width: 420px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const SettlementCardField = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+`;
+
+const SettlementCardLabel = styled.div`
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: ${({ theme }) => theme.mutedText};
+  font-weight: 700;
+`;
+
+const SettlementCardActions = styled.div`
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.75rem;
+`;
+
+const SettlementPrimaryButton = styled.button`
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  border: none;
+  background: ${({ theme }) => theme.primary};
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+
+  &:hover {
+    opacity: 0.92;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.primary};
+    outline-offset: 2px;
+  }
+`;
+
+const MobileTabs = styled.div`
+  display: none;
+  gap: 0.35rem;
+  padding: 0.5rem;
+  border: 1px solid ${({ theme }) => theme.border};
+  border-radius: 10px;
+  background: ${({ theme }) => theme.cardBg};
+  position: sticky;
+  top: 0;
+  z-index: 5;
+
+  @media (max-width: 768px) {
+    display: flex;
+  }
+`;
+
+const MobileTab = styled.button<{ active: boolean }>`
+  flex: 1;
+  border: 1px solid ${({ theme, active }) => (active ? theme.primary : 'transparent')};
+  background: ${({ theme, active }) => (active ? theme.primary : 'transparent')};
+  color: ${({ active, theme }) => (active ? '#fff' : theme.text)};
+  font-weight: 800;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.6rem 0.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.primary};
+    outline-offset: 2px;
+  }
 `;
 
 // Component Interface
@@ -749,6 +915,7 @@ interface ExpensesSectionProps {
   expenses: MockExpense[];
   balances: BalanceEntry[];
   onUpdate: () => void;
+  tripAccessToken?: string;
 }
 
 export default function ExpensesSection({
@@ -757,11 +924,16 @@ export default function ExpensesSection({
   expenses,
   balances,
   onUpdate,
+  tripAccessToken,
 }: ExpensesSectionProps) {
   // State
   const [formExpanded, setFormExpanded] = useState(false);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [settlementTab, setSettlementTab] = useState<'suggested' | 'previous'>('suggested');
+  const [mobileActiveTab, setMobileActiveTab] = useState<'balances' | 'settlements' | 'expenses'>(
+    'expenses'
+  );
+  const [isMobile, setIsMobile] = useState(false);
   const [settlementMethods, setSettlementMethods] = useState<Record<string, string>>({});
   const [settlementAmounts, setSettlementAmounts] = useState<Record<string, string>>({});
   const [settlementPayers, setSettlementPayers] = useState<Record<string, string>>({});
@@ -769,12 +941,24 @@ export default function ExpensesSection({
   const [previousSettlements, setPreviousSettlements] = useState<SettlementRead[]>([]);
   const [loadingSettlements, setLoadingSettlements] = useState(false);
 
+  // Track viewport for mobile-only layout.
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener?.('change', update);
+    return () => mq.removeEventListener?.('change', update);
+  }, []);
+
   // Fetch previous settlements
   useEffect(() => {
     const fetchSettlements = async () => {
       try {
         setLoadingSettlements(true);
-        const settlements = await api.listSettlements(tripId);
+        const settlements = await api.listSettlements(
+          tripId,
+          tripAccessToken ? { tripAccessToken } : undefined
+        );
         setPreviousSettlements(settlements);
       } catch (error) {
         console.error('Failed to fetch settlements:', error);
@@ -895,7 +1079,12 @@ export default function ExpensesSection({
           paid_by_member_id: paidBy,
           split_with_member_ids: selectedMembers,
         };
-        await api.updateExpense(tripId, editingExpenseId, expenseData);
+        await api.updateExpense(
+          tripId,
+          editingExpenseId,
+          expenseData,
+          tripAccessToken ? { tripAccessToken } : undefined
+        );
         alert('Expense updated successfully!');
       } else {
         // Create new expense
@@ -905,7 +1094,7 @@ export default function ExpensesSection({
           paid_by_member_id: paidBy,
           split_with_member_ids: selectedMembers,
         };
-        await api.addExpense(tripId, expenseData);
+        await api.addExpense(tripId, expenseData, tripAccessToken ? { tripAccessToken } : undefined);
         alert('Expense added successfully!');
       }
       
@@ -958,7 +1147,7 @@ export default function ExpensesSection({
     if (!confirm('Are you sure you want to delete this expense?')) return;
 
     try {
-      await api.deleteExpense(tripId, expenseId);
+      await api.deleteExpense(tripId, expenseId, tripAccessToken ? { tripAccessToken } : undefined);
       alert('Expense deleted successfully!');
       onUpdate();
     } catch (error) {
@@ -996,19 +1185,28 @@ export default function ExpensesSection({
     }
     
     try {
-      // Settlement: payer pays payee
-      await api.addSettlement(tripId, {
-        payer_member_id: payer,
-        payee_member_id: payee,
-        amount: amount,
-        mode: method,
-      });
+      // Settlement direction (NOT swapped):
+      // - payer = debtor (owes money) -> pays
+      // - payee = creditor (is owed money) -> receives
+      await api.addSettlement(
+        tripId,
+        {
+          payer_member_id: payer,
+          payee_member_id: payee,
+          amount: amount,
+          mode: method,
+        },
+        tripAccessToken ? { tripAccessToken } : undefined
+      );
       
       // Refresh balances and settlements
       await onUpdate();
       
       // Fetch updated settlements
-      const settlements = await api.listSettlements(tripId);
+      const settlements = await api.listSettlements(
+        tripId,
+        tripAccessToken ? { tripAccessToken } : undefined
+      );
       setPreviousSettlements(settlements);
       
       alert(`Settlement recorded!\n${getMemberName(payer)} → ${getMemberName(payee)}\nAmount: ${formatCurrency(amount)}\nMethod: ${method.toUpperCase()}`);
@@ -1067,6 +1265,348 @@ export default function ExpensesSection({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [optimizedSettlements.length]); // Only reinitialize when settlement count changes
+
+  const renderBalancesPanel = () => (
+    <PanelSection>
+      <SectionTitle style={{ marginBottom: '0.5rem' }}>Balances</SectionTitle>
+      <TableWrapper style={{ border: 'none', marginBottom: 0 }}>
+        <Table>
+          <TableHead>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHeader
+                    key={header.id}
+                    sortable={header.column.getCanSort()}
+                    onClick={header.column.getToggleSortingHandler()}
+                  >
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(header.column.columnDef.header, header.getContext())}
+                    {header.column.getCanSort() && (
+                      <SortIcon>
+                        {{
+                          asc: '↑',
+                          desc: '↓',
+                        }[header.column.getIsSorted() as string] ?? '⇅'}
+                      </SortIcon>
+                    )}
+                  </TableHeader>
+                ))}
+              </TableRow>
+            ))}
+          </TableHead>
+          <tbody>
+            {table.getRowModel().rows.map((row) => (
+              <TableRow key={row.id}>
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </tbody>
+        </Table>
+      </TableWrapper>
+    </PanelSection>
+  );
+
+  const renderSettlementsPanel = () => (
+    <PanelSection>
+      <SectionTitle style={{ marginBottom: '0.5rem' }}>Settlements</SectionTitle>
+
+      {/* Tabs */}
+      <SettlementTabs>
+        <SettlementTab
+          active={settlementTab === 'suggested'}
+          onClick={() => setSettlementTab('suggested')}
+        >
+          Suggested
+        </SettlementTab>
+        <SettlementTab
+          active={settlementTab === 'previous'}
+          onClick={() => setSettlementTab('previous')}
+        >
+          Previous
+        </SettlementTab>
+      </SettlementTabs>
+
+      {/* Tab Content */}
+      {settlementTab === 'suggested' ? (
+        <SettlementsWrapper>
+          {optimizedSettlements.length === 0 ? (
+            <EmptyState>
+              <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>✅</div>
+              <p>All settled up!</p>
+            </EmptyState>
+          ) : (
+            <>
+              {isMobile ? (
+                <SettlementCards>
+                  {optimizedSettlements.map((settlement) => {
+                    const settlementKey = `${settlement.from}-${settlement.to}`;
+                    const payerId = settlementPayers[settlementKey] || settlement.from;
+                    const payeeId = settlementPayees[settlementKey] || settlement.to;
+                    const amount = settlementAmounts[settlementKey] || settlement.amount.toFixed(2);
+                    const method = settlementMethods[settlementKey] || 'UPI';
+
+                    return (
+                      <SettlementCard key={settlementKey}>
+                        <SettlementCardTitle>
+                          {getMemberName(payerId)} → {getMemberName(payeeId)}
+                        </SettlementCardTitle>
+
+                        <SettlementCardGrid>
+                          <SettlementCardField>
+                            <SettlementCardLabel>Payer</SettlementCardLabel>
+                            <EditableSelect
+                              value={payerId}
+                              onChange={(e) => handlePayerChange(settlementKey, e.target.value)}
+                            >
+                              {members.map((member) => (
+                                <option key={member.member_id} value={member.member_id}>
+                                  {member.display_name}
+                                </option>
+                              ))}
+                            </EditableSelect>
+                          </SettlementCardField>
+
+                          <SettlementCardField>
+                            <SettlementCardLabel>Payee</SettlementCardLabel>
+                            <EditableSelect
+                              value={payeeId}
+                              onChange={(e) => handlePayeeChange(settlementKey, e.target.value)}
+                            >
+                              {members.map((member) => (
+                                <option key={member.member_id} value={member.member_id}>
+                                  {member.display_name}
+                                </option>
+                              ))}
+                            </EditableSelect>
+                          </SettlementCardField>
+
+                          <SettlementCardField>
+                            <SettlementCardLabel>Amount</SettlementCardLabel>
+                            <EditableAmountInput
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={amount}
+                              onChange={(e) => handleAmountChange(settlementKey, e.target.value)}
+                            />
+                          </SettlementCardField>
+
+                          <SettlementCardField>
+                            <SettlementCardLabel>Method</SettlementCardLabel>
+                            <EditableSelect
+                              value={method}
+                              onChange={(e) => handleMethodChange(settlementKey, e.target.value)}
+                            >
+                              <option value="UPI">UPI</option>
+                              <option value="Cash">Cash</option>
+                              <option value="Card">Card</option>
+                            </EditableSelect>
+                          </SettlementCardField>
+                        </SettlementCardGrid>
+
+                        <SettlementCardActions>
+                          <SettlementPrimaryButton type="button" onClick={() => handleMakeSettlement(settlementKey)}>
+                            Make Settlement
+                          </SettlementPrimaryButton>
+                        </SettlementCardActions>
+                      </SettlementCard>
+                    );
+                  })}
+                </SettlementCards>
+              ) : (
+                <SettlementSection>
+                  <SettlementsTable>
+                    <thead>
+                      <tr>
+                        <SettlementHeader>Payer → Payee</SettlementHeader>
+                        <SettlementHeader>Amount</SettlementHeader>
+                        <SettlementHeader>Method</SettlementHeader>
+                        <SettlementHeader>Action</SettlementHeader>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {optimizedSettlements.map((settlement) => {
+                        const settlementKey = `${settlement.from}-${settlement.to}`;
+                        const payerId = settlementPayers[settlementKey] || settlement.from;
+                        const payeeId = settlementPayees[settlementKey] || settlement.to;
+                        const amount = settlementAmounts[settlementKey] || settlement.amount.toFixed(2);
+                        return (
+                          <SettlementRow key={settlementKey}>
+                            <SettlementCell>
+                              <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', margin: 0 }}>
+                                <EditableSelect
+                                  value={payerId}
+                                  onChange={(e) => handlePayerChange(settlementKey, e.target.value)}
+                                >
+                                  {members.map((member) => (
+                                    <option key={member.member_id} value={member.member_id}>
+                                      {member.display_name}
+                                    </option>
+                                  ))}
+                                </EditableSelect>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--muted-text)', margin: 0 }}>→</span>
+                                <EditableSelect
+                                  value={payeeId}
+                                  onChange={(e) => handlePayeeChange(settlementKey, e.target.value)}
+                                >
+                                  {members.map((member) => (
+                                    <option key={member.member_id} value={member.member_id}>
+                                      {member.display_name}
+                                    </option>
+                                  ))}
+                                </EditableSelect>
+                              </div>
+                            </SettlementCell>
+                            <SettlementCell style={{ padding: '0.5rem', textAlign: 'right' }}>
+                              <EditableAmountInput
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={amount}
+                                onChange={(e) => handleAmountChange(settlementKey, e.target.value)}
+                              />
+                            </SettlementCell>
+                            <SettlementCell style={{ padding: '0.5rem' }}>
+                              <EditableSelect
+                                value={settlementMethods[settlementKey] || 'UPI'}
+                                onChange={(e) => handleMethodChange(settlementKey, e.target.value)}
+                              >
+                                <option value="UPI">UPI</option>
+                                <option value="Cash">Cash</option>
+                                <option value="Card">Card</option>
+                              </EditableSelect>
+                            </SettlementCell>
+                            <SettlementCell style={{ padding: '0.5rem' }}>
+                              <SettleButton onClick={() => handleMakeSettlement(settlementKey)}>
+                                Make Settlement
+                              </SettleButton>
+                            </SettlementCell>
+                          </SettlementRow>
+                        );
+                      })}
+                    </tbody>
+                  </SettlementsTable>
+                </SettlementSection>
+              )}
+            </>
+          )}
+        </SettlementsWrapper>
+      ) : (
+        <SettlementsWrapper>
+          {loadingSettlements ? (
+            <EmptyState>
+              <p>Loading settlements…</p>
+            </EmptyState>
+          ) : previousSettlements.length === 0 ? (
+            <EmptyState>
+              <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>📋</div>
+              <p>No settlement history yet</p>
+            </EmptyState>
+          ) : (
+            <SettlementSection>
+              <SettlementsTable>
+                <thead>
+                  <tr>
+                    <SettlementHeader>From → To</SettlementHeader>
+                    <SettlementHeader>Amount</SettlementHeader>
+                    <SettlementHeader>Date</SettlementHeader>
+                    <SettlementHeader>Method</SettlementHeader>
+                  </tr>
+                </thead>
+                <tbody>
+                  {previousSettlements.map((settlement) => (
+                    <SettlementRow key={settlement.id}>
+                      <SettlementCell>
+                        <strong>{getMemberName(settlement.payer_member_id)}</strong>
+                        {' → '}
+                        <strong>{getMemberName(settlement.payee_member_id)}</strong>
+                      </SettlementCell>
+                      <SettlementCell>{formatCurrency(settlement.amount)}</SettlementCell>
+                      <SettlementCell>
+                        <SettlementDate>
+                                      {formatRelativeDate(
+                                        settlement.created_at ||
+                                          // Some backends may send "date" instead of "created_at"
+                                          (settlement as unknown as { date?: string }).date ||
+                                          new Date().toISOString()
+                                      )}
+                        </SettlementDate>
+                      </SettlementCell>
+                      <SettlementCell>
+                        {settlement.mode === 'upi' ? 'UPI' : settlement.mode === 'cash' ? 'Cash' : 'Card'}
+                      </SettlementCell>
+                    </SettlementRow>
+                  ))}
+                </tbody>
+              </SettlementsTable>
+            </SettlementSection>
+          )}
+        </SettlementsWrapper>
+      )}
+    </PanelSection>
+  );
+
+  const renderExpensesPanel = () => (
+    <PanelSection>
+      <SectionTitle style={{ marginBottom: '0.5rem' }}>All Expenses ({expenses.length})</SectionTitle>
+
+      {expenses.length === 0 ? (
+        <EmptyState>
+          <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>💸</div>
+          <p>No expenses yet. Add your first expense above!</p>
+        </EmptyState>
+      ) : (
+        <ExpensesWrapper>
+          <ExpensesList>
+            {sortedGroups.map((groupLabel) => (
+              <DateGroup key={groupLabel}>
+                <DateHeader>{groupLabel}</DateHeader>
+                {groupedExpenses[groupLabel].map((expense, index) => (
+                  <ExpenseCard
+                    key={expense.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <ExpenseInfo>
+                      <ExpenseHeader>
+                        <CategoryBadge color={getCategoryColor(expense.category)}>
+                          {getCategoryEmoji(expense.category)} {expense.category}
+                        </CategoryBadge>
+                        <ExpenseDescription>{expense.description}</ExpenseDescription>
+                      </ExpenseHeader>
+                      <ExpenseMeta>
+                        Paid by <strong>{getMemberName(expense.paid_by_member_id || '')}</strong>{' '}
+                        • Split between {expense.split_with_member_ids?.length || 0} people •{' '}
+                        {formatRelativeDate(expense.date)}
+                      </ExpenseMeta>
+                    </ExpenseInfo>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <ExpenseAmount>{formatCurrency(expense.amount || 0)}</ExpenseAmount>
+                      <ExpenseActions className="expense-actions">
+                        <IconButton title="Edit" onClick={() => handleEdit(expense)}>
+                          ✏️
+                        </IconButton>
+                        <IconButton title="Delete" onClick={() => handleDelete(expense.id)}>
+                          🗑️
+                        </IconButton>
+                      </ExpenseActions>
+                    </div>
+                  </ExpenseCard>
+                ))}
+              </DateGroup>
+            ))}
+          </ExpensesList>
+        </ExpensesWrapper>
+      )}
+    </PanelSection>
+  );
 
   return (
         <>
@@ -1224,283 +1764,63 @@ export default function ExpensesSection({
 
       {/* Resizable Grid Layout */}
       <GridContainer>
-        <PanelGroup direction="vertical">
-          {/* Top Section: Balances (left) and Settlements (right) */}
-          <Panel defaultSize={35} minSize={25} maxSize={50}>
-            <PanelGroup direction="horizontal">
-              {/* Balances Panel - Left */}
-              <Panel defaultSize={50} minSize={30}>
-                <PanelSection>
-                  <SectionTitle style={{ marginBottom: '0.5rem' }}>Balances</SectionTitle>
-                  <TableWrapper style={{ border: 'none', marginBottom: 0 }}>
-            <Table>
-              <TableHead>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <TableHeader
-                        key={header.id}
-                        sortable={header.column.getCanSort()}
-                        onClick={header.column.getToggleSortingHandler()}
-                      >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(header.column.columnDef.header, header.getContext())}
-                        {header.column.getCanSort() && (
-                          <SortIcon>
-                            {{
-                              asc: '↑',
-                              desc: '↓',
-                            }[header.column.getIsSorted() as string] ?? '⇅'}
-                          </SortIcon>
-                        )}
-                      </TableHeader>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableHead>
-              <tbody>
-                {table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-              </tbody>
-            </Table>
-                  </TableWrapper>
-                </PanelSection>
-              </Panel>
+        {isMobile ? (
+          <>
+            <MobileTabs>
+              <MobileTab
+                type="button"
+                active={mobileActiveTab === 'balances'}
+                onClick={() => setMobileActiveTab('balances')}
+              >
+                Balances
+              </MobileTab>
+              <MobileTab
+                type="button"
+                active={mobileActiveTab === 'settlements'}
+                onClick={() => setMobileActiveTab('settlements')}
+              >
+                Settlements
+              </MobileTab>
+              <MobileTab
+                type="button"
+                active={mobileActiveTab === 'expenses'}
+                onClick={() => setMobileActiveTab('expenses')}
+              >
+                Expenses
+              </MobileTab>
+            </MobileTabs>
 
-              {/* Vertical Resize Handle */}
-              <PanelResizeHandle>
-                <ResizeHandleVertical />
-              </PanelResizeHandle>
+            {mobileActiveTab === 'balances' && renderBalancesPanel()}
+            {mobileActiveTab === 'settlements' && renderSettlementsPanel()}
+            {mobileActiveTab === 'expenses' && renderExpensesPanel()}
+          </>
+        ) : (
+          <PanelGroup direction="vertical">
+            {/* Top Section: Balances (left) and Settlements (right) */}
+            <Panel defaultSize={35} minSize={25} maxSize={50}>
+              <PanelGroup direction="horizontal">
+                {/* Balances Panel - Left */}
+                <Panel defaultSize={50} minSize={30}>{renderBalancesPanel()}</Panel>
 
-              {/* Settlements Panel - Right */}
-              <Panel defaultSize={50} minSize={30}>
-                <PanelSection>
-                  <SectionTitle style={{ marginBottom: '0.5rem' }}>Settlements</SectionTitle>
-                  
-                  {/* Tabs */}
-                  <SettlementTabs>
-                    <SettlementTab
-                      active={settlementTab === 'suggested'}
-                      onClick={() => setSettlementTab('suggested')}
-                    >
-                      Suggested
-                    </SettlementTab>
-                    <SettlementTab
-                      active={settlementTab === 'previous'}
-                      onClick={() => setSettlementTab('previous')}
-                    >
-                      Previous
-                    </SettlementTab>
-                  </SettlementTabs>
+                {/* Vertical Resize Handle */}
+                <PanelResizeHandle>
+                  <ResizeHandleVertical />
+                </PanelResizeHandle>
 
-                  {/* Tab Content */}
-                  {settlementTab === 'suggested' ? (
-                    <SettlementsWrapper>
-                      {optimizedSettlements.length === 0 ? (
-                        <EmptyState>
-                          <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>✅</div>
-                          <p>All settled up!</p>
-                        </EmptyState>
-                      ) : (
-                        <SettlementSection>
-                          <SettlementsTable>
-                            <thead>
-                              <tr>
-                                <SettlementHeader>Payer → Payee</SettlementHeader>
-                                <SettlementHeader>Amount</SettlementHeader>
-                                <SettlementHeader>Method</SettlementHeader>
-                                <SettlementHeader>Action</SettlementHeader>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {optimizedSettlements.map((settlement) => {
-                                const settlementKey = `${settlement.from}-${settlement.to}`;
-                                const payerId = settlementPayers[settlementKey] || settlement.from;
-                                const payeeId = settlementPayees[settlementKey] || settlement.to;
-                                const amount = settlementAmounts[settlementKey] || settlement.amount.toFixed(2);
-                                return (
-                                  <SettlementRow key={settlementKey}>
-                                    <SettlementCell>
-                                      <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', margin: 0 }}>
-                                        <EditableSelect
-                                          value={payerId}
-                                          onChange={(e) => handlePayerChange(settlementKey, e.target.value)}
-                                        >
-                                          {members.map((member) => (
-                                            <option key={member.member_id} value={member.member_id}>
-                                              {member.display_name}
-                                            </option>
-                                          ))}
-                                        </EditableSelect>
-                                        <span style={{ fontSize: '0.75rem', color: 'var(--muted-text)', margin: 0 }}>→</span>
-                                        <EditableSelect
-                                          value={payeeId}
-                                          onChange={(e) => handlePayeeChange(settlementKey, e.target.value)}
-                                        >
-                                          {members.map((member) => (
-                                            <option key={member.member_id} value={member.member_id}>
-                                              {member.display_name}
-                                            </option>
-                                          ))}
-                                        </EditableSelect>
-                                      </div>
-                                    </SettlementCell>
-                                    <SettlementCell style={{ padding: '0.5rem', textAlign: 'right' }}>
-                                      <EditableAmountInput
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        value={amount}
-                                        onChange={(e) => handleAmountChange(settlementKey, e.target.value)}
-                                      />
-                                    </SettlementCell>
-                                    <SettlementCell style={{ padding: '0.5rem' }}>
-                                      <EditableSelect
-                                        value={settlementMethods[settlementKey] || 'UPI'}
-                                        onChange={(e) => handleMethodChange(settlementKey, e.target.value)}
-                                      >
-                                        <option value="UPI">UPI</option>
-                                        <option value="Cash">Cash</option>
-                                        <option value="Card">Card</option>
-                                      </EditableSelect>
-                                    </SettlementCell>
-                                    <SettlementCell style={{ padding: '0.5rem' }}>
-                                      <SettleButton
-                                        onClick={() => handleMakeSettlement(settlementKey)}
-                                      >
-                                        Make Settlement
-                                      </SettleButton>
-                                    </SettlementCell>
-                                  </SettlementRow>
-                                );
-                              })}
-                            </tbody>
-                          </SettlementsTable>
-                        </SettlementSection>
-                      )}
-                    </SettlementsWrapper>
-                  ) : (
-                    <SettlementsWrapper>
-                      {previousSettlements.length === 0 ? (
-                        <EmptyState>
-                          <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>📋</div>
-                          <p>No settlement history yet</p>
-                        </EmptyState>
-                      ) : (
-                        <SettlementSection>
-                          <SettlementsTable>
-                            <thead>
-                              <tr>
-                                <SettlementHeader>From → To</SettlementHeader>
-                                <SettlementHeader>Amount</SettlementHeader>
-                                <SettlementHeader>Date</SettlementHeader>
-                                <SettlementHeader>Method</SettlementHeader>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {previousSettlements.map((settlement) => (
-                                <SettlementRow key={settlement.id}>
-                                  <SettlementCell>
-                                    <strong>{getMemberName(settlement.payer_member_id)}</strong>
-                                    {' → '}
-                                    <strong>{getMemberName(settlement.payee_member_id)}</strong>
-                                  </SettlementCell>
-                                  <SettlementCell>
-                                    {formatCurrency(settlement.amount)}
-                                  </SettlementCell>
-                                  <SettlementCell>
-                                    <SettlementDate>
-                                      {settlement.created_at ? formatRelativeDate(settlement.created_at) : 'N/A'}
-                                    </SettlementDate>
-                                  </SettlementCell>
-                                  <SettlementCell>
-                                    {settlement.mode === 'upi' ? 'UPI' : settlement.mode === 'cash' ? 'Cash' : 'Card'}
-                                  </SettlementCell>
-                                </SettlementRow>
-                              ))}
-                            </tbody>
-                          </SettlementsTable>
-                        </SettlementSection>
-                      )}
-                    </SettlementsWrapper>
-                  )}
-                </PanelSection>
-              </Panel>
-            </PanelGroup>
-          </Panel>
+                {/* Settlements Panel - Right */}
+                <Panel defaultSize={50} minSize={30}>{renderSettlementsPanel()}</Panel>
+              </PanelGroup>
+            </Panel>
 
-          {/* Horizontal Resize Handle */}
-          <PanelResizeHandle>
-            <ResizeHandleHorizontal />
-          </PanelResizeHandle>
+            {/* Horizontal Resize Handle */}
+            <PanelResizeHandle>
+              <ResizeHandleHorizontal />
+            </PanelResizeHandle>
 
-          {/* Bottom Section: Expenses List */}
-          <Panel defaultSize={65} minSize={30}>
-            <PanelSection>
-              <SectionTitle style={{ marginBottom: '0.5rem' }}>
-            All Expenses ({expenses.length})
-          </SectionTitle>
-
-          {expenses.length === 0 ? (
-            <EmptyState>
-              <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>💸</div>
-              <p>No expenses yet. Add your first expense above!</p>
-            </EmptyState>
-          ) : (
-            <ExpensesWrapper>
-            <ExpensesList>
-              {sortedGroups.map((groupLabel) => (
-                <DateGroup key={groupLabel}>
-                  <DateHeader>{groupLabel}</DateHeader>
-                  {groupedExpenses[groupLabel].map((expense, index) => (
-                    <ExpenseCard
-                      key={expense.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                    >
-                      <ExpenseInfo>
-                        <ExpenseHeader>
-                          <CategoryBadge color={getCategoryColor(expense.category)}>
-                            {getCategoryEmoji(expense.category)} {expense.category}
-                          </CategoryBadge>
-                          <ExpenseDescription>{expense.description}</ExpenseDescription>
-                        </ExpenseHeader>
-                        <ExpenseMeta>
-                          Paid by <strong>{getMemberName(expense.paid_by_member_id || '')}</strong>{' '}
-                          • Split between {expense.split_with_member_ids?.length || 0} people •{' '}
-                          {formatRelativeDate(expense.date)}
-                        </ExpenseMeta>
-                      </ExpenseInfo>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <ExpenseAmount>{formatCurrency(expense.amount || 0)}</ExpenseAmount>
-                        <ExpenseActions className="expense-actions">
-                          <IconButton title="Edit" onClick={() => handleEdit(expense)}>
-                            ✏️
-                          </IconButton>
-                          <IconButton title="Delete" onClick={() => handleDelete(expense.id)}>
-                            🗑️
-                          </IconButton>
-                        </ExpenseActions>
-                      </div>
-                    </ExpenseCard>
-                  ))}
-                </DateGroup>
-              ))}
-            </ExpensesList>
-            </ExpensesWrapper>
-          )}
-            </PanelSection>
-          </Panel>
-        </PanelGroup>
+            {/* Bottom Section: Expenses List */}
+            <Panel defaultSize={65} minSize={30}>{renderExpensesPanel()}</Panel>
+          </PanelGroup>
+        )}
       </GridContainer>
     </>
   );

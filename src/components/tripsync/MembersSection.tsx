@@ -176,9 +176,10 @@ interface MembersSectionProps {
   tripId: string;
   members: TripMemberInfo[];
   onUpdate: (updatedTrip: TripRead) => void;
+  tripAccessToken?: string;
 }
 
-export default function MembersSection({ tripId, members, onUpdate }: MembersSectionProps) {
+export default function MembersSection({ tripId, members, onUpdate, tripAccessToken }: MembersSectionProps) {
   const [displayName, setDisplayName] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [selectedMember, setSelectedMember] = useState<string | null>(null);
@@ -189,7 +190,11 @@ export default function MembersSection({ tripId, members, onUpdate }: MembersSec
 
     setIsAdding(true);
     try {
-      const updatedTrip = await api.addMember(tripId, { display_name: displayName });
+      const updatedTrip = await api.addMember(
+        tripId,
+        { display_name: displayName },
+        tripAccessToken ? { tripAccessToken } : undefined
+      );
       onUpdate(updatedTrip);
       setDisplayName('');
       alert('Member added successfully!');
@@ -269,7 +274,7 @@ export default function MembersSection({ tripId, members, onUpdate }: MembersSec
                   <MemberBadge linked={member.linked}>
                     {member.linked ? '✓ Linked' : '○ Unlinked'}
                   </MemberBadge>
-                  {!member.linked && (
+                  {!tripAccessToken && !member.linked && (
                     <ActionButtons>
                       <SecondaryButton onClick={() => handleLinkSelf(member.member_id)}>
                         Link to Me

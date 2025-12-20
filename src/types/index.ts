@@ -89,6 +89,11 @@ export interface ExpenseUpdate {
 
 export interface ExpenseRead extends ExpenseUpdate {
   id: string;
+  /**
+   * Optional timestamp from backend (ISO datetime).
+   * Not all backends include this yet; UI will fallback safely.
+   */
+  created_at?: string;
 }
 
 export interface SettlementCreate {
