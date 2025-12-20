@@ -1,6 +1,7 @@
 'use client';
 
-import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react';
+import { useEditor, EditorContent } from '@tiptap/react';
+import { BubbleMenu } from '@tiptap/react/menus';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import styled from '@emotion/styled';
@@ -280,7 +281,12 @@ export default function EditorComponent({ initialTitle = '', initialContent = ''
         <input type="color" onInput={event => editor.chain().focus().setColor((event.target as HTMLInputElement).value).run()} value={editor.getAttributes('textStyle').color || '#000000'} />
       </Toolbar>
       
-      {editor && <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }} shouldShow={({ editor }) => editor.isActive('image')}>
+      {editor && (
+        <BubbleMenu
+          editor={editor}
+          updateDelay={100}
+          shouldShow={({ editor }) => editor.isActive('image')}
+        >
         <ImageBubbleMenu>
             <button onClick={() => editor.chain().focus().updateAttributes('image', { 'data-align': 'left' }).run()} className={editor.isActive('image', { 'data-align': 'left' }) ? 'is-active' : ''}>Align Left</button>
             <button onClick={() => editor.chain().focus().updateAttributes('image', { 'data-align': 'center' }).run()} className={editor.isActive('image', { 'data-align': 'center' }) ? 'is-active' : ''}>Center</button>
@@ -290,7 +296,8 @@ export default function EditorComponent({ initialTitle = '', initialContent = ''
             <button onClick={() => editor.chain().focus().updateAttributes('image', { 'data-size': 'medium' }).run()} className={editor.isActive('image', { 'data-size': 'medium' }) ? 'is-active' : ''}>M</button>
             <button onClick={() => editor.chain().focus().updateAttributes('image', { 'data-size': 'large' }).run()} className={editor.isActive('image', { 'data-size': 'large' }) ? 'is-active' : ''}>L</button>
         </ImageBubbleMenu>
-      </BubbleMenu>}
+        </BubbleMenu>
+      )}
 
       <EditorWrapper>
         <EditorContent editor={editor} />
