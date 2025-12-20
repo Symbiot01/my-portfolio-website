@@ -24,6 +24,14 @@ import {
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const AUTH_TOKEN_KEY = 'auth_token';
 
+type TripSyncRequestOptions = {
+  /**
+   * TripSync “quicklink” token used for guest/link access.
+   * Sent ONLY to TripSync endpoints as `X-Trip-Access`.
+   */
+  tripAccessToken?: string;
+};
+
 
 // Helper to get auth headers
 // Add the return type Record<string, string>
@@ -33,6 +41,21 @@ const getAuthHeaders = (): Record<string, string> => {
   const token = cookies[AUTH_TOKEN_KEY];
   if (!token) return {};
   return { Authorization: `Bearer ${token}` };
+};
+
+const getTripSyncHeaders = (
+  opts?: TripSyncRequestOptions,
+  extra?: Record<string, string>
+): Record<string, string> => {
+  const headers: Record<string, string> = {
+    ...getAuthHeaders(),
+    ...(extra ?? {}),
+  };
+
+  const accessToken = opts?.tripAccessToken?.trim();
+  if (accessToken) headers['X-Trip-Access'] = accessToken;
+
+  return headers;
 };
 
 // We'll add functions for login, getMe, etc. here later.
@@ -156,7 +179,7 @@ export const api = {
   // Trips
   getMyTrips: async (): Promise<TripRead[]> => {
     const res = await fetch(`${API_URL}/api/tripsync/my`, {
-      headers: { ...getAuthHeaders() },
+      headers: getTripSyncHeaders(),
       cache: 'no-store',
     });
     if (!res.ok) throw new Error('Failed to fetch trips');
@@ -166,16 +189,16 @@ export const api = {
   createTrip: async (payload: TripCreate): Promise<TripRead> => {
     const res = await fetch(`${API_URL}/api/tripsync/`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      headers: getTripSyncHeaders(undefined, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
     });
     if (!res.ok) throw new Error('Failed to create trip');
     return res.json();
   },
 
-  getTrip: async (tripId: string): Promise<TripRead> => {
+  getTrip: async (tripId: string, opts?: TripSyncRequestOptions): Promise<TripRead> => {
     const res = await fetch(`${API_URL}/api/tripsync/${tripId}`, {
-      headers: { ...getAuthHeaders() },
+      headers: getTripSyncHeaders(opts),
       cache: 'no-store',
     });
     if (!res.ok) throw new Error('Failed to fetch trip');
@@ -183,10 +206,10 @@ export const api = {
   },
 
   // Members
-  addMember: async (tripId: string, payload: TripMemberCreate): Promise<TripRead> => {
+  addMember: async (tripId: string, payload: TripMemberCreate, opts?: TripSyncRequestOptions): Promise<TripRead> => {
     const res = await fetch(`${API_URL}/api/tripsync/${tripId}/members`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      headers: getTripSyncHeaders(opts, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
     });
     if (!res.ok) throw new Error('Failed to add member');
@@ -196,7 +219,7 @@ export const api = {
   linkSelfMember: async (tripId: string, payload: LinkSelfRequest): Promise<TripRead> => {
     const res = await fetch(`${API_URL}/api/tripsync/${tripId}/members/link-self`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      headers: getTripSyncHeaders(undefined, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
     });
     if (!res.ok) throw new Error('Failed to link self');
@@ -204,80 +227,80 @@ export const api = {
   },
 
   // Itinerary
-  listItinerary: async (tripId: string): Promise<ItineraryItemCreate[]> => {
+  listItinerary: async (tripId: string, opts?: TripSyncRequestOptions): Promise<ItineraryItemCreate[]> => {
     const res = await fetch(`${API_URL}/api/tripsync/${tripId}/itinerary`, {
-      headers: { ...getAuthHeaders() },
+      headers: getTripSyncHeaders(opts),
       cache: 'no-store',
     });
     if (!res.ok) throw new Error('Failed to list itinerary');
     return res.json();
   },
 
-  addItinerary: async (tripId: string, payload: ItineraryItemCreate): Promise<void> => {
+  addItinerary: async (tripId: string, payload: ItineraryItemCreate, opts?: TripSyncRequestOptions): Promise<void> => {
     const res = await fetch(`${API_URL}/api/tripsync/${tripId}/itinerary`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      headers: getTripSyncHeaders(opts, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
     });
     if (!res.ok) throw new Error('Failed to add itinerary item');
   },
 
-  updateItinerary: async (tripId: string, itemId: string, payload: ItineraryItemUpdate): Promise<void> => {
+  updateItinerary: async (tripId: string, itemId: string, payload: ItineraryItemUpdate, opts?: TripSyncRequestOptions): Promise<void> => {
     const res = await fetch(`${API_URL}/api/tripsync/${tripId}/itinerary/${itemId}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      headers: getTripSyncHeaders(opts, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
     });
     if (!res.ok) throw new Error('Failed to update itinerary item');
   },
 
-  deleteItinerary: async (tripId: string, itemId: string): Promise<void> => {
+  deleteItinerary: async (tripId: string, itemId: string, opts?: TripSyncRequestOptions): Promise<void> => {
     const res = await fetch(`${API_URL}/api/tripsync/${tripId}/itinerary/${itemId}`, {
       method: 'DELETE',
-      headers: { ...getAuthHeaders() },
+      headers: getTripSyncHeaders(opts),
     });
     if (!res.ok) throw new Error('Failed to delete itinerary item');
   },
 
   // Expenses
-  listExpenses: async (tripId: string): Promise<ExpenseRead[]> => {
+  listExpenses: async (tripId: string, opts?: TripSyncRequestOptions): Promise<ExpenseRead[]> => {
     const res = await fetch(`${API_URL}/api/tripsync/${tripId}/expenses`, {
-      headers: { ...getAuthHeaders() },
+      headers: getTripSyncHeaders(opts),
       cache: 'no-store',
     });
     if (!res.ok) throw new Error('Failed to list expenses');
     return res.json();
   },
 
-  addExpense: async (tripId: string, payload: ExpenseCreate): Promise<void> => {
+  addExpense: async (tripId: string, payload: ExpenseCreate, opts?: TripSyncRequestOptions): Promise<void> => {
     const res = await fetch(`${API_URL}/api/tripsync/${tripId}/expenses`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      headers: getTripSyncHeaders(opts, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
     });
     if (!res.ok) throw new Error('Failed to add expense');
   },
 
-  updateExpense: async (tripId: string, expenseId: string, payload: ExpenseUpdate): Promise<void> => {
+  updateExpense: async (tripId: string, expenseId: string, payload: ExpenseUpdate, opts?: TripSyncRequestOptions): Promise<void> => {
     const res = await fetch(`${API_URL}/api/tripsync/${tripId}/expenses/${expenseId}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      headers: getTripSyncHeaders(opts, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
     });
     if (!res.ok) throw new Error('Failed to update expense');
   },
 
-  deleteExpense: async (tripId: string, expenseId: string): Promise<void> => {
+  deleteExpense: async (tripId: string, expenseId: string, opts?: TripSyncRequestOptions): Promise<void> => {
     const res = await fetch(`${API_URL}/api/tripsync/${tripId}/expenses/${expenseId}`, {
       method: 'DELETE',
-      headers: { ...getAuthHeaders() },
+      headers: getTripSyncHeaders(opts),
     });
     if (!res.ok) throw new Error('Failed to delete expense');
   },
 
-  getBalances: async (tripId: string): Promise<BalanceEntry[]> => {
+  getBalances: async (tripId: string, opts?: TripSyncRequestOptions): Promise<BalanceEntry[]> => {
     const res = await fetch(`${API_URL}/api/tripsync/${tripId}/balances`, {
-      headers: { ...getAuthHeaders() },
+      headers: getTripSyncHeaders(opts),
       cache: 'no-store',
     });
     if (!res.ok) throw new Error('Failed to get balances');
@@ -285,37 +308,37 @@ export const api = {
   },
 
   // Settlements
-  listSettlements: async (tripId: string): Promise<SettlementRead[]> => {
+  listSettlements: async (tripId: string, opts?: TripSyncRequestOptions): Promise<SettlementRead[]> => {
     const res = await fetch(`${API_URL}/api/tripsync/${tripId}/settlements`, {
-      headers: { ...getAuthHeaders() },
+      headers: getTripSyncHeaders(opts),
       cache: 'no-store',
     });
     if (!res.ok) throw new Error('Failed to list settlements');
     return res.json();
   },
 
-  addSettlement: async (tripId: string, payload: SettlementCreate): Promise<void> => {
+  addSettlement: async (tripId: string, payload: SettlementCreate, opts?: TripSyncRequestOptions): Promise<void> => {
     const res = await fetch(`${API_URL}/api/tripsync/${tripId}/settlements`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      headers: getTripSyncHeaders(opts, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
     });
     if (!res.ok) throw new Error('Failed to add settlement');
   },
 
-  updateSettlement: async (tripId: string, settlementId: string, payload: SettlementUpdate): Promise<void> => {
+  updateSettlement: async (tripId: string, settlementId: string, payload: SettlementUpdate, opts?: TripSyncRequestOptions): Promise<void> => {
     const res = await fetch(`${API_URL}/api/tripsync/${tripId}/settlements/${settlementId}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      headers: getTripSyncHeaders(opts, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
     });
     if (!res.ok) throw new Error('Failed to update settlement');
   },
 
-  deleteSettlement: async (tripId: string, settlementId: string): Promise<void> => {
+  deleteSettlement: async (tripId: string, settlementId: string, opts?: TripSyncRequestOptions): Promise<void> => {
     const res = await fetch(`${API_URL}/api/tripsync/${tripId}/settlements/${settlementId}`, {
       method: 'DELETE',
-      headers: { ...getAuthHeaders() },
+      headers: getTripSyncHeaders(opts),
     });
     if (!res.ok) throw new Error('Failed to delete settlement');
   },

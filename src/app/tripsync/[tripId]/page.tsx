@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import styled from '@emotion/styled';
 import Navbar from '@/sections/home/Navbar';
 import { useAuth } from '@/context/AuthContext';
@@ -9,6 +9,22 @@ import { BalanceEntry, ItineraryItemCreate, TripRead, TripLinkInfo } from '@/typ
 import MembersSection from '@/components/tripsync/MembersSection';
 import ExpensesSection from '@/components/tripsync/ExpensesSection';
 import { mockTrip, mockExpenses, mockBalances, MockExpense } from '@/lib/mockData';
+
+const extractAccessTokenFromSecretUrl = (secretUrl: string): string | null => {
+  // Expected backend URL: .../api/tripsync/access/{token}
+  const marker = '/api/tripsync/access/';
+  const idx = secretUrl.lastIndexOf(marker);
+  if (idx === -1) return null;
+  const token = secretUrl.slice(idx + marker.length).split(/[?#]/)[0]?.trim();
+  return token || null;
+};
+
+const buildFrontendAccessLink = (secretUrl: string): string | null => {
+  const token = extractAccessTokenFromSecretUrl(secretUrl);
+  if (!token) return null;
+  // Use fragment for security: avoids server logs/referrers on the frontend route
+  return `${window.location.origin}/tripsync/access#${encodeURIComponent(token)}`;
+};
 
 const PageWrapper = styled.div`
   min-height: 100vh;
@@ -51,12 +67,29 @@ const SidebarContent = styled.div`
   flex: 1;
   display: flex;
   flex-direction: column;
+
+  @media (max-width: 768px) {
+    padding: 0.9rem 1rem;
+  }
 `;
 
 const TripInfo = styled.div`
   margin-bottom: 2.5rem;
   padding-bottom: 2rem;
   border-bottom: 2px solid ${({ theme }) => theme.border};
+
+  @media (max-width: 768px) {
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom-width: 1px;
+  }
+`;
+
+const TripTitleRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
 `;
 
 const TripTitle = styled.h2`
@@ -69,6 +102,12 @@ const TripTitle = styled.h2`
   -webkit-background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
+  margin-top: 0;
+
+  @media (max-width: 768px) {
+    margin-bottom: 0;
+    font-size: 1.25rem;
+  }
 `;
 
 const TripDescription = styled.p`
@@ -76,6 +115,10 @@ const TripDescription = styled.p`
   color: ${({ theme }) => theme.mutedText};
   line-height: 1.5;
   margin-bottom: 0.75rem;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 `;
 
 const TripMeta = styled.div`
@@ -88,12 +131,21 @@ const TripMeta = styled.div`
   background: ${({ theme }) => theme.background};
   border-radius: 6px;
   margin-top: 0.75rem;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 `;
 
 const NavSection = styled.nav`
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+
+  /* On phones we move section navigation into a hamburger menu */
+  @media (max-width: 768px) {
+    display: none;
+  }
 `;
 
 const NavButton = styled.button<{ active: boolean }>`
@@ -135,6 +187,84 @@ const NavButton = styled.button<{ active: boolean }>`
 
   &:active {
     transform: translateX(2px) scale(0.98);
+  }
+`;
+
+const TripMenuButton = styled.button`
+  display: none;
+  border: 1px solid ${({ theme }) => theme.border};
+  background: ${({ theme }) => theme.cardBg};
+  color: ${({ theme }) => theme.text};
+  padding: 0.45rem 0.55rem;
+  border-radius: 9px;
+  cursor: pointer;
+  line-height: 1;
+  font-size: 1.05rem;
+  min-width: 40px;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    border-color: ${({ theme }) => theme.primary};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.primary};
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 768px) {
+    display: inline-flex;
+  }
+`;
+
+const MobileOverlay = styled.div<{ open: boolean }>`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 90;
+  display: ${({ open }) => (open ? 'block' : 'none')};
+`;
+
+const MobileMenu = styled.div`
+  position: fixed;
+  top: 70px; /* navbar height */
+  right: 12px;
+  left: 12px;
+  background: ${({ theme }) => theme.surface};
+  border: 1px solid ${({ theme }) => theme.border};
+  border-radius: 12px;
+  z-index: 91;
+  padding: 0.5rem;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.16);
+
+  @media (min-width: 769px) {
+    display: none;
+  }
+`;
+
+const MobileMenuItem = styled.button<{ active: boolean }>`
+  width: 100%;
+  text-align: left;
+  padding: 0.85rem 0.8rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: ${({ active, theme }) => (active ? theme.primary : 'transparent')};
+  color: ${({ active, theme }) => (active ? '#fff' : theme.text)};
+  font-weight: ${({ active }) => (active ? 800 : 650)};
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  cursor: pointer;
+
+  &:hover {
+    border-color: ${({ active, theme }) => (active ? 'transparent' : theme.border)};
+    background: ${({ active, theme }) => (active ? theme.primary : theme.toggleBg)};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.primary};
+    outline-offset: 2px;
   }
 `;
 
@@ -189,11 +319,35 @@ export default function TripDetailPage({ params }: Props) {
   const { user, isLoading } = useAuth();
   const [trip, setTrip] = useState<TripRead | null>(null);
   const [activeSection, setActiveSection] = useState<'members' | 'itinerary' | 'expenses' | 'settlements' | 'share'>('members');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [itinerary, setItinerary] = useState<ItineraryItemCreate[]>([]);
   const [expenses, setExpenses] = useState<MockExpense[]>([]);
   const [balances, setBalances] = useState<BalanceEntry[]>([]);
   const [linkInfo, setLinkInfo] = useState<TripLinkInfo | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const sections = useMemo(
+    () => (['members', 'itinerary', 'expenses', 'settlements', 'share'] as const),
+    []
+  );
+
+  // Close menu on Escape and lock scroll while open (mobile).
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileMenuOpen(false);
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [mobileMenuOpen]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -205,12 +359,16 @@ export default function TripDetailPage({ params }: Props) {
         const items = await api.listItinerary(params.tripId);
         setItinerary(items);
         const expensesList = await api.listExpenses(params.tripId);
-        // Map ExpenseRead to MockExpense by adding missing UI fields
-        const mappedExpenses: MockExpense[] = expensesList.map((exp) => ({
-          ...exp,
-          date: new Date().toISOString(), // Backend should provide this, fallback to now
-          category: 'Other', // Backend should provide this, fallback to Other
-        }));
+        // Map ExpenseRead to MockExpense by adding missing UI fields.
+        // Prefer backend timestamps when present; otherwise fallback to "now".
+        const mappedExpenses: MockExpense[] = expensesList.map((exp) => {
+          const expAny = exp as unknown as { created_at?: string; date?: string; category?: string };
+          return {
+            ...exp,
+            date: expAny.date || expAny.created_at || new Date().toISOString(),
+            category: expAny.category || 'Other',
+          };
+        });
         setExpenses(mappedExpenses);
         const b = await api.getBalances(params.tripId);
         setBalances(b);
@@ -244,12 +402,16 @@ export default function TripDetailPage({ params }: Props) {
   const handleExpensesUpdate = async () => {
     try {
       const expensesList = await api.listExpenses(params.tripId);
-      // Map ExpenseRead to MockExpense by adding missing UI fields
-      const mappedExpenses: MockExpense[] = expensesList.map((exp) => ({
-        ...exp,
-        date: new Date().toISOString(), // Backend should provide this, fallback to now
-        category: 'Other', // Backend should provide this, fallback to Other
-      }));
+      // Map ExpenseRead to MockExpense by adding missing UI fields.
+      // Prefer backend timestamps when present; otherwise fallback to "now".
+      const mappedExpenses: MockExpense[] = expensesList.map((exp) => {
+        const expAny = exp as unknown as { created_at?: string; date?: string; category?: string };
+        return {
+          ...exp,
+          date: expAny.date || expAny.created_at || new Date().toISOString(),
+          category: expAny.category || 'Other',
+        };
+      });
       setExpenses(mappedExpenses);
       const b = await api.getBalances(params.tripId);
       setBalances(b);
@@ -273,7 +435,18 @@ export default function TripDetailPage({ params }: Props) {
         <Sidebar>
           <SidebarContent>
             <TripInfo>
-              <TripTitle>{trip?.name || 'Trip'}</TripTitle>
+              <TripTitleRow>
+                <TripTitle>{trip?.name || 'Trip'}</TripTitle>
+                <TripMenuButton
+                  type="button"
+                  aria-label={mobileMenuOpen ? 'Close trip menu' : 'Open trip menu'}
+                  aria-expanded={mobileMenuOpen}
+                  aria-controls="trip-mobile-menu"
+                  onClick={() => setMobileMenuOpen((v) => !v)}
+                >
+                  {mobileMenuOpen ? '✕' : '☰'}
+                </TripMenuButton>
+              </TripTitleRow>
               {trip?.description && <TripDescription>{trip.description}</TripDescription>}
               <TripMeta>
                 <span>👥</span>
@@ -282,7 +455,7 @@ export default function TripDetailPage({ params }: Props) {
             </TripInfo>
 
             <NavSection>
-              {(['members', 'itinerary', 'expenses', 'settlements', 'share'] as const).map((section) => (
+              {sections.map((section) => (
                 <NavButton
                   key={section}
                   active={activeSection === section}
@@ -294,6 +467,25 @@ export default function TripDetailPage({ params }: Props) {
             </NavSection>
           </SidebarContent>
         </Sidebar>
+
+        <MobileOverlay open={mobileMenuOpen} aria-hidden={!mobileMenuOpen} onClick={() => setMobileMenuOpen(false)} />
+        {mobileMenuOpen && (
+          <MobileMenu id="trip-mobile-menu" role="dialog" aria-modal="true" aria-label="Trip sections">
+            {sections.map((section) => (
+              <MobileMenuItem
+                key={section}
+                type="button"
+                active={activeSection === section}
+                onClick={() => {
+                  setActiveSection(section);
+                  setMobileMenuOpen(false);
+                }}
+              >
+                {section}
+              </MobileMenuItem>
+            ))}
+          </MobileMenu>
+        )}
 
         {/* Main Content Area */}
         <MainContent>
@@ -350,6 +542,9 @@ export default function TripDetailPage({ params }: Props) {
                     <>
                       <div style={{ marginBottom: '1.5rem' }}>
                         <h3 style={{ marginBottom: '0.5rem', fontSize: '1rem', fontWeight: 600 }}>Access Link</h3>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--muted-text)', marginBottom: '0.75rem' }}>
+                          Share this frontend link. Anyone with it can edit the trip without logging in.
+                        </div>
                         <div
                           style={{
                             padding: '1rem',
@@ -362,7 +557,9 @@ export default function TripDetailPage({ params }: Props) {
                             marginBottom: '0.75rem',
                           }}
                         >
-                          {linkInfo.secret_access_url}
+                          {typeof window !== 'undefined'
+                            ? buildFrontendAccessLink(linkInfo.secret_access_url) ?? linkInfo.secret_access_url
+                            : linkInfo.secret_access_url}
                         </div>
                         <div style={{ fontSize: '0.85rem', color: 'var(--muted-text)', marginBottom: '1rem' }}>
                           <div>Status: {linkInfo.link_revoked ? <span style={{ color: '#E74C3C' }}>Revoked</span> : <span style={{ color: '#27AE60' }}>Active</span>}</div>
@@ -372,6 +569,35 @@ export default function TripDetailPage({ params }: Props) {
                             </div>
                           )}
                           <div>Version: {linkInfo.access_token_version}</div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                          <button
+                            onClick={async () => {
+                              try {
+                                const link =
+                                  buildFrontendAccessLink(linkInfo.secret_access_url) ?? linkInfo.secret_access_url;
+                                await navigator.clipboard.writeText(link);
+                                alert('Link copied!');
+                              } catch (error) {
+                                console.error('Failed to copy link:', error);
+                                alert('Failed to copy link. Please copy it manually.');
+                              }
+                            }}
+                            disabled={linkInfo.link_revoked}
+                            style={{
+                              padding: '0.6rem 1rem',
+                              borderRadius: '3px',
+                              border: '1px solid var(--border)',
+                              background: 'transparent',
+                              color: 'var(--text)',
+                              cursor: linkInfo.link_revoked ? 'not-allowed' : 'pointer',
+                              fontSize: '0.9rem',
+                              fontWeight: 600,
+                              opacity: linkInfo.link_revoked ? 0.6 : 1,
+                            }}
+                          >
+                            Copy Link
+                          </button>
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
