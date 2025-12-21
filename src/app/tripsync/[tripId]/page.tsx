@@ -5,9 +5,11 @@ import styled from '@emotion/styled';
 import Navbar from '@/sections/home/Navbar';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
-import { BalanceEntry, ItineraryItemCreate, TripRead, TripLinkInfo } from '@/types';
+import { BalanceEntry, ItineraryItemRead, TripRead, TripLinkInfo } from '@/types';
 import MembersSection from '@/components/tripsync/MembersSection';
 import ExpensesSection from '@/components/tripsync/ExpensesSection';
+import TripDetailsSection from '@/components/tripsync/TripDetailsSection';
+import ItinerarySection from '@/components/tripsync/ItinerarySection';
 import { mockTrip, mockExpenses, mockBalances, MockExpense } from '@/lib/mockData';
 
 const extractAccessTokenFromSecretUrl = (secretUrl: string): string | null => {
@@ -79,7 +81,7 @@ const TripInfo = styled.div`
   border-bottom: 2px solid ${({ theme }) => theme.border};
 
   @media (max-width: 768px) {
-    margin-bottom: 0.5rem;
+                                                                                                                    margin-bottom: 0.5rem;
     padding-bottom: 0.5rem;
     border-bottom-width: 1px;
   }
@@ -318,16 +320,19 @@ type Props = { params: { tripId: string } };
 export default function TripDetailPage({ params }: Props) {
   const { user, isLoading } = useAuth();
   const [trip, setTrip] = useState<TripRead | null>(null);
-  const [activeSection, setActiveSection] = useState<'members' | 'itinerary' | 'expenses' | 'settlements' | 'share'>('members');
+  const [activeSection, setActiveSection] = useState<
+    'members' | 'itinerary' | 'expenses' | 'settlements' | 'share' | 'details'
+  >('members');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [itinerary, setItinerary] = useState<ItineraryItemCreate[]>([]);
+  const [itinerary, setItinerary] = useState<ItineraryItemRead[]>([]);
   const [expenses, setExpenses] = useState<MockExpense[]>([]);
   const [balances, setBalances] = useState<BalanceEntry[]>([]);
   const [linkInfo, setLinkInfo] = useState<TripLinkInfo | null>(null);
+  const [frontendAccessLink, setFrontendAccessLink] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const sections = useMemo(
-    () => (['members', 'itinerary', 'expenses', 'settlements', 'share'] as const),
+    () => (['members', 'details', 'itinerary', 'expenses', 'settlements', 'share'] as const),
     []
   );
 
@@ -395,8 +400,26 @@ export default function TripDetailPage({ params }: Props) {
     run();
   }, [params.tripId, user, isLoading]);
 
+  // Derive the frontend share link only on the client to avoid leaking tokens in SSR HTML.
+  useEffect(() => {
+    if (!linkInfo?.secret_access_url) {
+      setFrontendAccessLink(null);
+      return;
+    }
+    setFrontendAccessLink(buildFrontendAccessLink(linkInfo.secret_access_url));
+  }, [linkInfo]);
+
   const handleTripUpdate = (updatedTrip: TripRead) => {
     setTrip(updatedTrip);
+  };
+
+  const handleItineraryRefresh = async () => {
+    try {
+      const items = await api.listItinerary(params.tripId);
+      setItinerary(items);
+    } catch (e) {
+      console.error('Failed to refresh itinerary:', e);
+    }
   };
 
   const handleExpensesUpdate = async () => {
@@ -506,18 +529,21 @@ export default function TripDetailPage({ params }: Props) {
                 />
               )}
 
+              {activeSection === 'details' && (
+                <TripDetailsSection
+                  tripId={params.tripId}
+                  // Logged-in mode uses JWT; editing allowed.
+                  canEdit={true}
+                  onNeedRefresh={handleItineraryRefresh}
+                />
+              )}
+
               {activeSection === 'itinerary' && (
-                <div>
-                  <ul>
-                    {itinerary.map((i, idx) => (
-                      <li key={idx}>
-                        <strong>{i.title}</strong> — {i.item_type} — {new Date(i.start_time).toLocaleString()}
-                        {i.end_time ? ` → ${new Date(i.end_time).toLocaleString()}` : ''}
-                        {i.location ? ` @ ${i.location}` : ''}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                <ItinerarySection
+                  tripId={params.tripId}
+                  items={itinerary}
+                  onRefresh={handleItineraryRefresh}
+                />
               )}
 
               {activeSection === 'expenses' && trip && (
@@ -557,9 +583,7 @@ export default function TripDetailPage({ params }: Props) {
                             marginBottom: '0.75rem',
                           }}
                         >
-                          {typeof window !== 'undefined'
-                            ? buildFrontendAccessLink(linkInfo.secret_access_url) ?? linkInfo.secret_access_url
-                            : linkInfo.secret_access_url}
+                          {frontendAccessLink ?? 'Generating link…'}
                         </div>
                         <div style={{ fontSize: '0.85rem', color: 'var(--muted-text)', marginBottom: '1rem' }}>
                           <div>Status: {linkInfo.link_revoked ? <span style={{ color: '#E74C3C' }}>Revoked</span> : <span style={{ color: '#27AE60' }}>Active</span>}</div>
@@ -574,26 +598,25 @@ export default function TripDetailPage({ params }: Props) {
                           <button
                             onClick={async () => {
                               try {
-                                const link =
-                                  buildFrontendAccessLink(linkInfo.secret_access_url) ?? linkInfo.secret_access_url;
-                                await navigator.clipboard.writeText(link);
+                                if (!frontendAccessLink) throw new Error('Link not ready');
+                                await navigator.clipboard.writeText(frontendAccessLink);
                                 alert('Link copied!');
                               } catch (error) {
                                 console.error('Failed to copy link:', error);
                                 alert('Failed to copy link. Please copy it manually.');
                               }
                             }}
-                            disabled={linkInfo.link_revoked}
+                            disabled={linkInfo.link_revoked || !frontendAccessLink}
                             style={{
                               padding: '0.6rem 1rem',
                               borderRadius: '3px',
                               border: '1px solid var(--border)',
                               background: 'transparent',
                               color: 'var(--text)',
-                              cursor: linkInfo.link_revoked ? 'not-allowed' : 'pointer',
+                              cursor: linkInfo.link_revoked || !frontendAccessLink ? 'not-allowed' : 'pointer',
                               fontSize: '0.9rem',
                               fontWeight: 600,
-                              opacity: linkInfo.link_revoked ? 0.6 : 1,
+                              opacity: linkInfo.link_revoked || !frontendAccessLink ? 0.6 : 1,
                             }}
                           >
                             Copy Link

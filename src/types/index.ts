@@ -62,6 +62,12 @@ export interface ItineraryItemCreate {
   start_time: string; // ISO datetime
   end_time?: string | null; // ISO datetime
   location?: string | null;
+  notes?: string | null;
+  day_index?: number | null;
+  all_day?: boolean | null;
+  place_id?: string | null;
+  lat?: number | null;
+  lng?: number | null;
 }
 
 export interface ItineraryItemUpdate {
@@ -71,6 +77,15 @@ export interface ItineraryItemUpdate {
   end_time?: string | null; // ISO datetime
   location?: string | null;
   notes?: string | null;
+  day_index?: number | null;
+  all_day?: boolean | null;
+  place_id?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+}
+
+export interface ItineraryItemRead extends ItineraryItemCreate {
+  id: string;
 }
 
 export interface ExpenseCreate {
@@ -133,4 +148,72 @@ export interface TripLinkInfo {
   link_revoked: boolean;
   link_expires_at?: string | null; // ISO datetime
   access_token_version: number;
+}
+
+// --- TripDoc + AI edit types ---
+export type JsonPatchOp =
+  | { op: 'add' | 'replace' | 'test'; path: string; value: unknown }
+  | { op: 'remove'; path: string }
+  | { op: 'move' | 'copy'; from: string; path: string }
+  | { op: 'add' | 'replace'; path: string; value: unknown };
+
+export interface TripDocDateRange {
+  start: string; // YYYY-MM-DD
+  end: string; // YYYY-MM-DD
+}
+
+export interface TripDoc {
+  schema_version: number;
+  timezone: string;
+  title: string;
+  date_range?: TripDocDateRange | null;
+  members: unknown[]; // travel segments (v2); render later
+  lodgings: unknown[]; // hotels (v2); render later
+  natural_language_trip_brief: string;
+  shared_notes: string;
+  revision: number;
+  updated_at: string; // ISO datetime
+}
+
+export interface TripDocPatchRequest {
+  client_revision: number;
+  patch: JsonPatchOp[];
+}
+
+export interface TripDocPatchResponse {
+  revision: number;
+  updated_at: string;
+}
+
+export type ItineraryOp =
+  | { op: 'create'; temp_id: string; item: ItineraryItemCreate }
+  | { op: 'update'; id: string; patch: Partial<ItineraryItemUpdate> }
+  | { op: 'delete'; id: string };
+
+export interface AiProposeEditsRequest {
+  user_request: string;
+  edit_doc: boolean;
+  edit_itinerary: boolean;
+}
+
+export interface AiProposeEditsResponse {
+  trip_doc_patch: JsonPatchOp[];
+  itinerary_ops: ItineraryOp[];
+  nonce: string;
+  nonce_expires_at: string; // ISO datetime
+}
+
+export interface AiApplyEditsRequest {
+  client_revision: number;
+  nonce: string;
+  trip_doc_patch: JsonPatchOp[];
+  itinerary_ops: ItineraryOp[];
+}
+
+export interface AiApplyEditsResponse {
+  new_revision: number;
+  updated_at: string;
+  created_item_ids?: string[];
+  updated_item_ids?: string[];
+  deleted_item_ids?: string[];
 }
