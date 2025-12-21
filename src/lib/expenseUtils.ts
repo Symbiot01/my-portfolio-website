@@ -3,10 +3,12 @@
 import { BalanceEntry } from '@/types';
 
 export const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('en-US', {
+  const safe = Number.isFinite(amount) ? amount : 0;
+  return new Intl.NumberFormat('en-IN', {
     style: 'currency',
-    currency: 'USD',
-  }).format(amount);
+    currency: 'INR',
+    maximumFractionDigits: 2,
+  }).format(safe);
 };
 
 export const formatRelativeDate = (dateString: string): string => {

@@ -9,6 +9,7 @@ import {
   TripMemberCreate,
   LinkSelfRequest,
   ItineraryItemCreate,
+  ItineraryItemRead,
   ItineraryItemUpdate,
   ExpenseCreate,
   ExpenseUpdate,
@@ -19,9 +20,23 @@ import {
   BalanceEntry,
   LinkExpiryUpdate,
   TripLinkInfo,
+  TripDoc,
+  TripDocPatchRequest,
+  TripDocPatchResponse,
+  AiProposeEditsRequest,
+  AiProposeEditsResponse,
+  AiApplyEditsRequest,
+  AiApplyEditsResponse,
 } from '@/types'; 
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+/**
+ * API base:
+ * - Server: use absolute backend origin from env (required for SSR/node fetch).
+ * - Browser: use same-origin `/api/*` and rely on Next rewrites to proxy (avoids CORS).
+ */
+const API_ORIGIN = (typeof window === 'undefined' ? process.env.NEXT_PUBLIC_API_URL : '') || '';
+const API_BASE = API_ORIGIN.replace(/\/$/, '');
+const apiUrl = (path: string): string => `${API_BASE}${path}`;
 const AUTH_TOKEN_KEY = 'auth_token';
 
 type TripSyncRequestOptions = {
@@ -30,6 +45,12 @@ type TripSyncRequestOptions = {
    * Sent ONLY to TripSync endpoints as `X-Trip-Access`.
    */
   tripAccessToken?: string;
+  /**
+   * Quicklink write gate.
+   * When true, TripSync endpoints include `X-Trip-Edit: 1` to allow mutations.
+   * (Backend should reject quicklink writes without this header.)
+   */
+  tripEdit?: boolean;
 };
 
 
@@ -54,6 +75,7 @@ const getTripSyncHeaders = (
 
   const accessToken = opts?.tripAccessToken?.trim();
   if (accessToken) headers['X-Trip-Access'] = accessToken;
+  if (opts?.tripEdit) headers['X-Trip-Edit'] = '1';
 
   return headers;
 };
@@ -63,7 +85,7 @@ const getTripSyncHeaders = (
 export const api = {
   // --- Authentication ---
   login: async (email: string, pass: string): Promise<{ access_token: string }> => {
-    const res = await fetch(`${API_URL}/api/auth/jwt/login`, {
+    const res = await fetch(apiUrl(`/api/auth/jwt/login`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ username: email, password: pass }),
@@ -92,7 +114,7 @@ export const api = {
     const token = cookies[AUTH_TOKEN_KEY];
     if (!token) throw new Error('Not authenticated');
 
-    const res = await fetch(`${API_URL}/api/auth/users/me`, {
+    const res = await fetch(apiUrl(`/api/auth/users/me`), {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -105,7 +127,7 @@ export const api = {
 
 
   getBlogPosts: async (skip = 0, limit = 10): Promise<BlogPost[]> => {
-    const res = await fetch(`${API_URL}/api/blog/posts?skip=${skip}&limit=${limit}`, {
+    const res = await fetch(apiUrl(`/api/blog/posts?skip=${skip}&limit=${limit}`), {
       next: { revalidate: 60 } // Revalidate cache every 60 seconds
     });
     if (!res.ok) throw new Error('Failed to fetch posts');
@@ -113,7 +135,7 @@ export const api = {
   },
 
   getPostBySlug: async (slug: string): Promise<BlogPost> => {
-    const res = await fetch(`${API_URL}/api/blog/posts/${slug}`, {
+    const res = await fetch(apiUrl(`/api/blog/posts/${slug}`), {
       next: { revalidate: 60 }
     });
     if (!res.ok) throw new Error('Failed to fetch post');
@@ -122,13 +144,13 @@ export const api = {
 
   // --- NEW COMMENT FUNCTIONS ---
   getComments: async (postId: string): Promise<Comment[]> => {
-    const res = await fetch(`${API_URL}/api/blog/posts/${postId}/comments`);
+    const res = await fetch(apiUrl(`/api/blog/posts/${postId}/comments`));
     if (!res.ok) throw new Error('Failed to fetch comments');
     return res.json();
   },
 
   postComment: async (postId: string, content: string): Promise<Comment> => {
-    const res = await fetch(`${API_URL}/api/blog/posts/${postId}/comments`, {
+    const res = await fetch(apiUrl(`/api/blog/posts/${postId}/comments`), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -141,7 +163,7 @@ export const api = {
   },
 
   createPost: async (postData: { title: string; content: string; excerpt?: string, tags?: string[], cover_image_url?: string }): Promise<BlogPost> => {
-    const res = await fetch(`${API_URL}/api/blog/posts`, {
+    const res = await fetch(apiUrl(`/api/blog/posts`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify(postData),
@@ -151,7 +173,7 @@ export const api = {
   },
 
   getMyPosts: async (): Promise<BlogPost[]> => {
-    const res = await fetch(`${API_URL}/api/blog/posts/me`, {
+    const res = await fetch(apiUrl(`/api/blog/posts/me`), {
       headers: getAuthHeaders(),
       cache: 'no-store', // Don't cache user-specific data
     });
@@ -162,7 +184,7 @@ export const api = {
     const formData = new FormData();
     formData.append('file', file);
 
-    const res = await fetch(`${API_URL}/api/uploads/image`, {
+    const res = await fetch(apiUrl(`/api/uploads/image`), {
       method: 'POST',
       headers: {
         ...getAuthHeaders(), // Your existing function to get the auth token
@@ -178,7 +200,7 @@ export const api = {
   // --- TripSync ---
   // Trips
   getMyTrips: async (): Promise<TripRead[]> => {
-    const res = await fetch(`${API_URL}/api/tripsync/my`, {
+    const res = await fetch(apiUrl(`/api/tripsync/my`), {
       headers: getTripSyncHeaders(),
       cache: 'no-store',
     });
@@ -187,7 +209,7 @@ export const api = {
   },
 
   createTrip: async (payload: TripCreate): Promise<TripRead> => {
-    const res = await fetch(`${API_URL}/api/tripsync/`, {
+    const res = await fetch(apiUrl(`/api/tripsync/`), {
       method: 'POST',
       headers: getTripSyncHeaders(undefined, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
@@ -197,7 +219,7 @@ export const api = {
   },
 
   getTrip: async (tripId: string, opts?: TripSyncRequestOptions): Promise<TripRead> => {
-    const res = await fetch(`${API_URL}/api/tripsync/${tripId}`, {
+    const res = await fetch(apiUrl(`/api/tripsync/${tripId}`), {
       headers: getTripSyncHeaders(opts),
       cache: 'no-store',
     });
@@ -207,7 +229,7 @@ export const api = {
 
   // Members
   addMember: async (tripId: string, payload: TripMemberCreate, opts?: TripSyncRequestOptions): Promise<TripRead> => {
-    const res = await fetch(`${API_URL}/api/tripsync/${tripId}/members`, {
+    const res = await fetch(apiUrl(`/api/tripsync/${tripId}/members`), {
       method: 'POST',
       headers: getTripSyncHeaders(opts, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
@@ -217,7 +239,7 @@ export const api = {
   },
 
   linkSelfMember: async (tripId: string, payload: LinkSelfRequest): Promise<TripRead> => {
-    const res = await fetch(`${API_URL}/api/tripsync/${tripId}/members/link-self`, {
+    const res = await fetch(apiUrl(`/api/tripsync/${tripId}/members/link-self`), {
       method: 'POST',
       headers: getTripSyncHeaders(undefined, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
@@ -227,8 +249,8 @@ export const api = {
   },
 
   // Itinerary
-  listItinerary: async (tripId: string, opts?: TripSyncRequestOptions): Promise<ItineraryItemCreate[]> => {
-    const res = await fetch(`${API_URL}/api/tripsync/${tripId}/itinerary`, {
+  listItinerary: async (tripId: string, opts?: TripSyncRequestOptions): Promise<ItineraryItemRead[]> => {
+    const res = await fetch(apiUrl(`/api/tripsync/${tripId}/itinerary`), {
       headers: getTripSyncHeaders(opts),
       cache: 'no-store',
     });
@@ -237,7 +259,7 @@ export const api = {
   },
 
   addItinerary: async (tripId: string, payload: ItineraryItemCreate, opts?: TripSyncRequestOptions): Promise<void> => {
-    const res = await fetch(`${API_URL}/api/tripsync/${tripId}/itinerary`, {
+    const res = await fetch(apiUrl(`/api/tripsync/${tripId}/itinerary`), {
       method: 'POST',
       headers: getTripSyncHeaders(opts, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
@@ -246,7 +268,7 @@ export const api = {
   },
 
   updateItinerary: async (tripId: string, itemId: string, payload: ItineraryItemUpdate, opts?: TripSyncRequestOptions): Promise<void> => {
-    const res = await fetch(`${API_URL}/api/tripsync/${tripId}/itinerary/${itemId}`, {
+    const res = await fetch(apiUrl(`/api/tripsync/${tripId}/itinerary/${itemId}`), {
       method: 'PATCH',
       headers: getTripSyncHeaders(opts, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
@@ -255,7 +277,7 @@ export const api = {
   },
 
   deleteItinerary: async (tripId: string, itemId: string, opts?: TripSyncRequestOptions): Promise<void> => {
-    const res = await fetch(`${API_URL}/api/tripsync/${tripId}/itinerary/${itemId}`, {
+    const res = await fetch(apiUrl(`/api/tripsync/${tripId}/itinerary/${itemId}`), {
       method: 'DELETE',
       headers: getTripSyncHeaders(opts),
     });
@@ -264,7 +286,7 @@ export const api = {
 
   // Expenses
   listExpenses: async (tripId: string, opts?: TripSyncRequestOptions): Promise<ExpenseRead[]> => {
-    const res = await fetch(`${API_URL}/api/tripsync/${tripId}/expenses`, {
+    const res = await fetch(apiUrl(`/api/tripsync/${tripId}/expenses`), {
       headers: getTripSyncHeaders(opts),
       cache: 'no-store',
     });
@@ -273,7 +295,7 @@ export const api = {
   },
 
   addExpense: async (tripId: string, payload: ExpenseCreate, opts?: TripSyncRequestOptions): Promise<void> => {
-    const res = await fetch(`${API_URL}/api/tripsync/${tripId}/expenses`, {
+    const res = await fetch(apiUrl(`/api/tripsync/${tripId}/expenses`), {
       method: 'POST',
       headers: getTripSyncHeaders(opts, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
@@ -282,7 +304,7 @@ export const api = {
   },
 
   updateExpense: async (tripId: string, expenseId: string, payload: ExpenseUpdate, opts?: TripSyncRequestOptions): Promise<void> => {
-    const res = await fetch(`${API_URL}/api/tripsync/${tripId}/expenses/${expenseId}`, {
+    const res = await fetch(apiUrl(`/api/tripsync/${tripId}/expenses/${expenseId}`), {
       method: 'PATCH',
       headers: getTripSyncHeaders(opts, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
@@ -291,7 +313,7 @@ export const api = {
   },
 
   deleteExpense: async (tripId: string, expenseId: string, opts?: TripSyncRequestOptions): Promise<void> => {
-    const res = await fetch(`${API_URL}/api/tripsync/${tripId}/expenses/${expenseId}`, {
+    const res = await fetch(apiUrl(`/api/tripsync/${tripId}/expenses/${expenseId}`), {
       method: 'DELETE',
       headers: getTripSyncHeaders(opts),
     });
@@ -299,7 +321,7 @@ export const api = {
   },
 
   getBalances: async (tripId: string, opts?: TripSyncRequestOptions): Promise<BalanceEntry[]> => {
-    const res = await fetch(`${API_URL}/api/tripsync/${tripId}/balances`, {
+    const res = await fetch(apiUrl(`/api/tripsync/${tripId}/balances`), {
       headers: getTripSyncHeaders(opts),
       cache: 'no-store',
     });
@@ -309,7 +331,7 @@ export const api = {
 
   // Settlements
   listSettlements: async (tripId: string, opts?: TripSyncRequestOptions): Promise<SettlementRead[]> => {
-    const res = await fetch(`${API_URL}/api/tripsync/${tripId}/settlements`, {
+    const res = await fetch(apiUrl(`/api/tripsync/${tripId}/settlements`), {
       headers: getTripSyncHeaders(opts),
       cache: 'no-store',
     });
@@ -318,7 +340,7 @@ export const api = {
   },
 
   addSettlement: async (tripId: string, payload: SettlementCreate, opts?: TripSyncRequestOptions): Promise<void> => {
-    const res = await fetch(`${API_URL}/api/tripsync/${tripId}/settlements`, {
+    const res = await fetch(apiUrl(`/api/tripsync/${tripId}/settlements`), {
       method: 'POST',
       headers: getTripSyncHeaders(opts, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
@@ -327,7 +349,7 @@ export const api = {
   },
 
   updateSettlement: async (tripId: string, settlementId: string, payload: SettlementUpdate, opts?: TripSyncRequestOptions): Promise<void> => {
-    const res = await fetch(`${API_URL}/api/tripsync/${tripId}/settlements/${settlementId}`, {
+    const res = await fetch(apiUrl(`/api/tripsync/${tripId}/settlements/${settlementId}`), {
       method: 'PATCH',
       headers: getTripSyncHeaders(opts, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
@@ -336,7 +358,7 @@ export const api = {
   },
 
   deleteSettlement: async (tripId: string, settlementId: string, opts?: TripSyncRequestOptions): Promise<void> => {
-    const res = await fetch(`${API_URL}/api/tripsync/${tripId}/settlements/${settlementId}`, {
+    const res = await fetch(apiUrl(`/api/tripsync/${tripId}/settlements/${settlementId}`), {
       method: 'DELETE',
       headers: getTripSyncHeaders(opts),
     });
@@ -345,7 +367,7 @@ export const api = {
 
   // Share Links
   getLink: async (tripId: string): Promise<TripLinkInfo> => {
-    const res = await fetch(`${API_URL}/api/tripsync/${tripId}/link`, {
+    const res = await fetch(apiUrl(`/api/tripsync/${tripId}/link`), {
       headers: { ...getAuthHeaders() },
       cache: 'no-store',
     });
@@ -354,7 +376,7 @@ export const api = {
   },
 
   rotateLink: async (tripId: string): Promise<{ secret_access_url: string }> => {
-    const res = await fetch(`${API_URL}/api/tripsync/${tripId}/rotate-link`, {
+    const res = await fetch(apiUrl(`/api/tripsync/${tripId}/rotate-link`), {
       method: 'POST',
       headers: { ...getAuthHeaders() },
     });
@@ -363,7 +385,7 @@ export const api = {
   },
 
   revokeLink: async (tripId: string): Promise<void> => {
-    const res = await fetch(`${API_URL}/api/tripsync/${tripId}/revoke-link`, {
+    const res = await fetch(apiUrl(`/api/tripsync/${tripId}/revoke-link`), {
       method: 'POST',
       headers: { ...getAuthHeaders() },
     });
@@ -371,7 +393,7 @@ export const api = {
   },
 
   updateLinkExpiry: async (tripId: string, payload: LinkExpiryUpdate): Promise<void> => {
-    const res = await fetch(`${API_URL}/api/tripsync/${tripId}/link-expiry`, {
+    const res = await fetch(apiUrl(`/api/tripsync/${tripId}/link-expiry`), {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify(payload),
@@ -381,8 +403,74 @@ export const api = {
 
   // Public preview
   previewTripByAccess: async (accessToken: string): Promise<TripRead> => {
-    const res = await fetch(`${API_URL}/api/tripsync/access/${accessToken}`);
+    const res = await fetch(apiUrl(`/api/tripsync/access/${accessToken}`));
     if (!res.ok) throw new Error('Failed to preview trip');
+    return res.json();
+  },
+
+  // TripDoc
+  getTripDoc: async (tripId: string, opts?: TripSyncRequestOptions): Promise<TripDoc> => {
+    const res = await fetch(apiUrl(`/api/tripsync/${tripId}/doc`), {
+      headers: getTripSyncHeaders(opts),
+      cache: 'no-store',
+    });
+    if (!res.ok) throw new Error('Failed to fetch trip doc');
+    return res.json();
+  },
+
+  patchTripDoc: async (
+    tripId: string,
+    payload: TripDocPatchRequest,
+    opts?: TripSyncRequestOptions
+  ): Promise<TripDocPatchResponse> => {
+    const res = await fetch(apiUrl(`/api/tripsync/${tripId}/doc`), {
+      method: 'PATCH',
+      headers: getTripSyncHeaders(opts, { 'Content-Type': 'application/json' }),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      // Allow callers to detect 409 for optimistic concurrency.
+      const err = new Error('Failed to update trip doc') as Error & { status?: number };
+      err.status = res.status;
+      throw err;
+    }
+    return res.json();
+  },
+
+  // AI edits
+  aiProposeEdits: async (
+    tripId: string,
+    payload: AiProposeEditsRequest,
+    opts?: TripSyncRequestOptions
+  ): Promise<AiProposeEditsResponse> => {
+    const res = await fetch(apiUrl(`/api/tripsync/${tripId}/ai/propose-edits`), {
+      method: 'POST',
+      headers: getTripSyncHeaders(opts, { 'Content-Type': 'application/json' }),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = new Error(`Failed to propose AI edits (HTTP ${res.status})`) as Error & { status?: number };
+      err.status = res.status;
+      throw err;
+    }
+    return res.json();
+  },
+
+  aiApplyEdits: async (
+    tripId: string,
+    payload: AiApplyEditsRequest,
+    opts?: TripSyncRequestOptions
+  ): Promise<AiApplyEditsResponse> => {
+    const res = await fetch(apiUrl(`/api/tripsync/${tripId}/ai/apply-edits`), {
+      method: 'POST',
+      headers: getTripSyncHeaders(opts, { 'Content-Type': 'application/json' }),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = new Error('Failed to apply AI edits') as Error & { status?: number };
+      err.status = res.status;
+      throw err;
+    }
     return res.json();
   },
 

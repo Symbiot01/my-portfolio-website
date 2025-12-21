@@ -177,9 +177,20 @@ interface MembersSectionProps {
   members: TripMemberInfo[];
   onUpdate: (updatedTrip: TripRead) => void;
   tripAccessToken?: string;
+  /**
+   * Quicklink write gate.
+   * When false (and tripAccessToken is present), disable mutations.
+   */
+  canEdit?: boolean;
 }
 
-export default function MembersSection({ tripId, members, onUpdate, tripAccessToken }: MembersSectionProps) {
+export default function MembersSection({
+  tripId,
+  members,
+  onUpdate,
+  tripAccessToken,
+  canEdit = true,
+}: MembersSectionProps) {
   const [displayName, setDisplayName] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [selectedMember, setSelectedMember] = useState<string | null>(null);
@@ -187,13 +198,17 @@ export default function MembersSection({ tripId, members, onUpdate, tripAccessTo
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!displayName.trim()) return;
+    if (tripAccessToken && !canEdit) {
+      alert('Editing is disabled for this share link. Enable editing to add members.');
+      return;
+    }
 
     setIsAdding(true);
     try {
       const updatedTrip = await api.addMember(
         tripId,
         { display_name: displayName },
-        tripAccessToken ? { tripAccessToken } : undefined
+        tripAccessToken ? { tripAccessToken, tripEdit: canEdit } : undefined
       );
       onUpdate(updatedTrip);
       setDisplayName('');
@@ -240,12 +255,18 @@ export default function MembersSection({ tripId, members, onUpdate, tripAccessTo
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               required
+              disabled={tripAccessToken ? !canEdit || isAdding : isAdding}
             />
           </InputGroup>
-          <Button type="submit" disabled={isAdding}>
+          <Button type="submit" disabled={tripAccessToken ? !canEdit || isAdding : isAdding}>
             {isAdding ? 'Adding...' : 'Add Member'}
           </Button>
         </Form>
+        {tripAccessToken && !canEdit && (
+          <div style={{ marginTop: '0.75rem', fontSize: '0.9rem', color: 'var(--muted-text)' }}>
+            Editing is disabled for this share link.
+          </div>
+        )}
       </AddMemberSection>
 
       <SectionTitle>Trip Members ({members.length})</SectionTitle>

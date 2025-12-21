@@ -42,12 +42,13 @@ const GridContainer = styled.div`
 const PanelSection = styled.div`
   background: ${({ theme }) => theme.background};
   border: 1px solid ${({ theme }) => theme.border};
-  border-radius: 4px;
+  border-radius: 14px;
   padding: 1rem;
   overflow: auto;
   height: 100%;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.03);
 
   &::-webkit-scrollbar {
     width: 6px;
@@ -67,7 +68,7 @@ const PanelSection = styled.div`
   }
 
   @media (max-width: 768px) {
-    padding: 0.75rem;
+    padding: 0.85rem;
   }
 `;
 
@@ -120,9 +121,9 @@ const ResizeHandleHorizontal = styled.div`
 `;
 
 const AddExpenseCard = styled(motion.div)<{ expanded: boolean }>`
-  background: ${({ theme }) => theme.background};
+  background: ${({ theme }) => theme.cardBg};
   border: 2px dashed ${({ theme }) => theme.border};
-  border-radius: 4px;
+  border-radius: 14px;
   padding: ${({ expanded }) => (expanded ? '1.25rem' : '1rem')};
   margin-bottom: 1rem;
   cursor: ${({ expanded }) => (expanded ? 'default' : 'pointer')};
@@ -130,6 +131,10 @@ const AddExpenseCard = styled(motion.div)<{ expanded: boolean }>`
 
   &:hover {
     border-color: ${({ theme, expanded }) => !expanded && theme.primary};
+  }
+
+  @media (max-width: 768px) {
+    padding: ${({ expanded }) => (expanded ? '1rem' : '0.9rem')};
   }
 `;
 
@@ -184,7 +189,7 @@ const Label = styled.label`
 
 const Input = styled.input`
   padding: 0.6rem;
-  border-radius: 3px;
+  border-radius: 12px;
   border: 1px solid ${({ theme }) => theme.border};
   background: ${({ theme }) => theme.cardBg};
   color: ${({ theme }) => theme.text};
@@ -198,7 +203,7 @@ const Input = styled.input`
 
 const Select = styled.select`
   padding: 0.6rem;
-  border-radius: 3px;
+  border-radius: 12px;
   border: 1px solid ${({ theme }) => theme.border};
   background: ${({ theme }) => theme.cardBg};
   color: ${({ theme }) => theme.text};
@@ -261,7 +266,7 @@ const CustomAmountInput = styled(Input)`
 
 const Button = styled.button`
   padding: 0.65rem 1.25rem;
-  border-radius: 3px;
+  border-radius: 12px;
   border: none;
   background: ${({ theme }) => theme.primary};
   color: white;
@@ -283,7 +288,7 @@ const Button = styled.button`
 // Table Styled Components
 const TableWrapper = styled.div`
   margin-bottom: 0;
-  border-radius: 3px;
+  border-radius: 12px;
   overflow: auto;
   border: 1px solid ${({ theme }) => theme.border};
   background: ${({ theme }) => theme.background};
@@ -471,9 +476,9 @@ const DateHeader = styled.h4`
 `;
 
 const ExpenseCard = styled(motion.div)`
-  background: ${({ theme }) => theme.background};
+  background: ${({ theme }) => theme.cardBg};
   border: 1px solid ${({ theme }) => theme.border};
-  border-radius: 3px;
+  border-radius: 14px;
   padding: 1rem;
   display: flex;
   justify-content: space-between;
@@ -487,6 +492,13 @@ const ExpenseCard = styled(motion.div)`
 
   &:hover .expense-actions {
     opacity: 1;
+  }
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+    padding: 0.9rem;
   }
 `;
 
@@ -505,7 +517,7 @@ const ExpenseHeader = styled.div`
 
 const CategoryBadge = styled.span<{ color: string }>`
   padding: 0.2rem 0.6rem;
-  border-radius: 2px;
+  border-radius: 999px;
   background: ${({ color }) => color}20;
   color: ${({ color }) => color};
   font-size: 0.7rem;
@@ -520,17 +532,42 @@ const ExpenseDescription = styled.h4`
   font-weight: 600;
   margin: 0;
   color: ${({ theme }) => theme.text};
+
+  @media (max-width: 640px) {
+    font-size: 1.02rem;
+  }
 `;
 
 const ExpenseMeta = styled.div`
   font-size: 0.85rem;
   color: ${({ theme }) => theme.mutedText};
+
+  @media (max-width: 640px) {
+    font-size: 0.82rem;
+    line-height: 1.35;
+  }
 `;
 
 const ExpenseAmount = styled.div`
   font-size: 1.8rem;
   font-weight: 800;
   color: ${({ theme }) => theme.text};
+
+  @media (max-width: 640px) {
+    font-size: 1.35rem;
+    text-align: left;
+  }
+`;
+
+const ExpenseRight = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+
+  @media (max-width: 640px) {
+    width: 100%;
+    justify-content: space-between;
+  }
 `;
 
 const ExpenseActions = styled.div`
@@ -538,6 +575,10 @@ const ExpenseActions = styled.div`
   gap: 0.5rem;
   opacity: 0;
   transition: opacity 0.2s ease;
+
+  @media (max-width: 768px) {
+    opacity: 1; /* no hover on touch devices */
+  }
 `;
 
 const IconButton = styled.button`
@@ -546,7 +587,7 @@ const IconButton = styled.button`
   background: transparent;
   color: ${({ theme }) => theme.mutedText};
   cursor: pointer;
-  border-radius: 2px;
+  border-radius: 10px;
   transition: all 0.2s ease;
 
   &:hover {
@@ -617,6 +658,11 @@ const SettlementTabs = styled.div`
   gap: 0.25rem;
   border-bottom: 2px solid ${({ theme }) => theme.border};
   margin-bottom: 0.75rem;
+
+  @media (max-width: 768px) {
+    gap: 0.4rem;
+    border-bottom-width: 1px;
+  }
 `;
 
 const SettlementTab = styled.button<{ active: boolean }>`
@@ -629,7 +675,7 @@ const SettlementTab = styled.button<{ active: boolean }>`
   cursor: pointer;
   position: relative;
   transition: all 0.2s ease;
-  border-radius: 3px 3px 0 0;
+  border-radius: 12px 12px 0 0;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 
@@ -807,9 +853,10 @@ const SettlementCards = styled.div`
 
 const SettlementCard = styled.div`
   border: 1px solid ${({ theme }) => theme.border};
-  background: ${({ theme }) => theme.background};
+  background: ${({ theme }) => theme.cardBg};
   border-radius: 12px;
   padding: 0.75rem;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.03);
 `;
 
 const SettlementCardTitle = styled.div`
@@ -817,6 +864,24 @@ const SettlementCardTitle = styled.div`
   font-size: 0.9rem;
   margin-bottom: 0.5rem;
   color: ${({ theme }) => theme.text};
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+`;
+
+const SettlementSummaryAmount = styled.div`
+  font-weight: 900;
+  color: ${({ theme }) => theme.text};
+  font-size: 0.95rem;
+  white-space: nowrap;
+`;
+
+const SettlementSummaryMeta = styled.div`
+  color: ${({ theme }) => theme.mutedText};
+  font-size: 0.85rem;
+  line-height: 1.35;
 `;
 
 const SettlementCardGrid = styled.div`
@@ -851,8 +916,32 @@ const SettlementCardActions = styled.div`
   margin-top: 0.75rem;
 `;
 
+const SettlementSecondaryButton = styled.button`
+  flex: 1;
+  min-width: 0;
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid ${({ theme }) => theme.border};
+  background: transparent;
+  color: ${({ theme }) => theme.text};
+  font-weight: 800;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+
+  &:hover {
+    background: ${({ theme }) => theme.toggleBg};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.primary};
+    outline-offset: 2px;
+  }
+`;
+
 const SettlementPrimaryButton = styled.button`
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   padding: 0.6rem 0.75rem;
   border-radius: 10px;
   border: none;
@@ -916,6 +1005,11 @@ interface ExpensesSectionProps {
   balances: BalanceEntry[];
   onUpdate: () => void;
   tripAccessToken?: string;
+  /**
+   * Quicklink write gate.
+   * When false (and tripAccessToken is present), disable mutations.
+   */
+  canEdit?: boolean;
 }
 
 export default function ExpensesSection({
@@ -925,6 +1019,7 @@ export default function ExpensesSection({
   balances,
   onUpdate,
   tripAccessToken,
+  canEdit = true,
 }: ExpensesSectionProps) {
   // State
   const [formExpanded, setFormExpanded] = useState(false);
@@ -933,6 +1028,7 @@ export default function ExpensesSection({
   const [mobileActiveTab, setMobileActiveTab] = useState<'balances' | 'settlements' | 'expenses'>(
     'expenses'
   );
+  const [expandedSettlementKey, setExpandedSettlementKey] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [settlementMethods, setSettlementMethods] = useState<Record<string, string>>({});
   const [settlementAmounts, setSettlementAmounts] = useState<Record<string, string>>({});
@@ -1068,6 +1164,10 @@ export default function ExpensesSection({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!description.trim() || !amount || selectedMembers.length === 0) return;
+    if (tripAccessToken && !canEdit) {
+      alert('Editing is disabled for this share link. Enable editing to add/edit expenses.');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -1083,7 +1183,7 @@ export default function ExpensesSection({
           tripId,
           editingExpenseId,
           expenseData,
-          tripAccessToken ? { tripAccessToken } : undefined
+          tripAccessToken ? { tripAccessToken, tripEdit: canEdit } : undefined
         );
         alert('Expense updated successfully!');
       } else {
@@ -1094,7 +1194,11 @@ export default function ExpensesSection({
           paid_by_member_id: paidBy,
           split_with_member_ids: selectedMembers,
         };
-        await api.addExpense(tripId, expenseData, tripAccessToken ? { tripAccessToken } : undefined);
+        await api.addExpense(
+          tripId,
+          expenseData,
+          tripAccessToken ? { tripAccessToken, tripEdit: canEdit } : undefined
+        );
         alert('Expense added successfully!');
       }
       
@@ -1118,6 +1222,10 @@ export default function ExpensesSection({
   };
 
   const handleEdit = (expense: MockExpense) => {
+    if (tripAccessToken && !canEdit) {
+      alert('Editing is disabled for this share link.');
+      return;
+    }
     // Set editing mode
     setEditingExpenseId(expense.id);
     
@@ -1145,9 +1253,17 @@ export default function ExpensesSection({
 
   const handleDelete = async (expenseId: string) => {
     if (!confirm('Are you sure you want to delete this expense?')) return;
+    if (tripAccessToken && !canEdit) {
+      alert('Editing is disabled for this share link.');
+      return;
+    }
 
     try {
-      await api.deleteExpense(tripId, expenseId, tripAccessToken ? { tripAccessToken } : undefined);
+      await api.deleteExpense(
+        tripId,
+        expenseId,
+        tripAccessToken ? { tripAccessToken, tripEdit: canEdit } : undefined
+      );
       alert('Expense deleted successfully!');
       onUpdate();
     } catch (error) {
@@ -1188,6 +1304,10 @@ export default function ExpensesSection({
       // Settlement direction (NOT swapped):
       // - payer = debtor (owes money) -> pays
       // - payee = creditor (is owed money) -> receives
+      if (tripAccessToken && !canEdit) {
+        alert('Editing is disabled for this share link. Enable editing to record settlements.');
+        return;
+      }
       await api.addSettlement(
         tripId,
         {
@@ -1196,7 +1316,7 @@ export default function ExpensesSection({
           amount: amount,
           mode: method,
         },
-        tripAccessToken ? { tripAccessToken } : undefined
+        tripAccessToken ? { tripAccessToken, tripEdit: canEdit } : undefined
       );
       
       // Refresh balances and settlements
@@ -1350,67 +1470,83 @@ export default function ExpensesSection({
                     const payeeId = settlementPayees[settlementKey] || settlement.to;
                     const amount = settlementAmounts[settlementKey] || settlement.amount.toFixed(2);
                     const method = settlementMethods[settlementKey] || 'UPI';
+                    const isExpanded = expandedSettlementKey === settlementKey;
 
                     return (
                       <SettlementCard key={settlementKey}>
                         <SettlementCardTitle>
-                          {getMemberName(payerId)} → {getMemberName(payeeId)}
+                          <span style={{ fontWeight: 900 }}>
+                            {getMemberName(payerId)} → {getMemberName(payeeId)}
+                          </span>
+                          <SettlementSummaryAmount>{formatCurrency(Number(amount) || 0)}</SettlementSummaryAmount>
                         </SettlementCardTitle>
 
-                        <SettlementCardGrid>
-                          <SettlementCardField>
-                            <SettlementCardLabel>Payer</SettlementCardLabel>
-                            <EditableSelect
-                              value={payerId}
-                              onChange={(e) => handlePayerChange(settlementKey, e.target.value)}
-                            >
-                              {members.map((member) => (
-                                <option key={member.member_id} value={member.member_id}>
-                                  {member.display_name}
-                                </option>
-                              ))}
-                            </EditableSelect>
-                          </SettlementCardField>
+                        {!isExpanded ? (
+                          <SettlementSummaryMeta>
+                            Method: <strong style={{ color: 'inherit' }}>{method}</strong>
+                          </SettlementSummaryMeta>
+                        ) : (
+                          <SettlementCardGrid>
+                            <SettlementCardField>
+                              <SettlementCardLabel>Payer</SettlementCardLabel>
+                              <EditableSelect
+                                value={payerId}
+                                onChange={(e) => handlePayerChange(settlementKey, e.target.value)}
+                              >
+                                {members.map((member) => (
+                                  <option key={member.member_id} value={member.member_id}>
+                                    {member.display_name}
+                                  </option>
+                                ))}
+                              </EditableSelect>
+                            </SettlementCardField>
 
-                          <SettlementCardField>
-                            <SettlementCardLabel>Payee</SettlementCardLabel>
-                            <EditableSelect
-                              value={payeeId}
-                              onChange={(e) => handlePayeeChange(settlementKey, e.target.value)}
-                            >
-                              {members.map((member) => (
-                                <option key={member.member_id} value={member.member_id}>
-                                  {member.display_name}
-                                </option>
-                              ))}
-                            </EditableSelect>
-                          </SettlementCardField>
+                            <SettlementCardField>
+                              <SettlementCardLabel>Payee</SettlementCardLabel>
+                              <EditableSelect
+                                value={payeeId}
+                                onChange={(e) => handlePayeeChange(settlementKey, e.target.value)}
+                              >
+                                {members.map((member) => (
+                                  <option key={member.member_id} value={member.member_id}>
+                                    {member.display_name}
+                                  </option>
+                                ))}
+                              </EditableSelect>
+                            </SettlementCardField>
 
-                          <SettlementCardField>
-                            <SettlementCardLabel>Amount</SettlementCardLabel>
-                            <EditableAmountInput
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={amount}
-                              onChange={(e) => handleAmountChange(settlementKey, e.target.value)}
-                            />
-                          </SettlementCardField>
+                            <SettlementCardField>
+                              <SettlementCardLabel>Amount</SettlementCardLabel>
+                              <EditableAmountInput
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={amount}
+                                onChange={(e) => handleAmountChange(settlementKey, e.target.value)}
+                              />
+                            </SettlementCardField>
 
-                          <SettlementCardField>
-                            <SettlementCardLabel>Method</SettlementCardLabel>
-                            <EditableSelect
-                              value={method}
-                              onChange={(e) => handleMethodChange(settlementKey, e.target.value)}
-                            >
-                              <option value="UPI">UPI</option>
-                              <option value="Cash">Cash</option>
-                              <option value="Card">Card</option>
-                            </EditableSelect>
-                          </SettlementCardField>
-                        </SettlementCardGrid>
+                            <SettlementCardField>
+                              <SettlementCardLabel>Method</SettlementCardLabel>
+                              <EditableSelect
+                                value={method}
+                                onChange={(e) => handleMethodChange(settlementKey, e.target.value)}
+                              >
+                                <option value="UPI">UPI</option>
+                                <option value="Cash">Cash</option>
+                                <option value="Card">Card</option>
+                              </EditableSelect>
+                            </SettlementCardField>
+                          </SettlementCardGrid>
+                        )}
 
                         <SettlementCardActions>
+                          <SettlementSecondaryButton
+                            type="button"
+                            onClick={() => setExpandedSettlementKey((cur) => (cur === settlementKey ? null : settlementKey))}
+                          >
+                            {isExpanded ? 'Done' : 'Edit'}
+                          </SettlementSecondaryButton>
                           <SettlementPrimaryButton type="button" onClick={() => handleMakeSettlement(settlementKey)}>
                             Make Settlement
                           </SettlementPrimaryButton>
@@ -1587,7 +1723,7 @@ export default function ExpensesSection({
                         {formatRelativeDate(expense.date)}
                       </ExpenseMeta>
                     </ExpenseInfo>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <ExpenseRight>
                       <ExpenseAmount>{formatCurrency(expense.amount || 0)}</ExpenseAmount>
                       <ExpenseActions className="expense-actions">
                         <IconButton title="Edit" onClick={() => handleEdit(expense)}>
@@ -1597,7 +1733,7 @@ export default function ExpensesSection({
                           🗑️
                         </IconButton>
                       </ExpenseActions>
-                    </div>
+                    </ExpenseRight>
                   </ExpenseCard>
                 ))}
               </DateGroup>

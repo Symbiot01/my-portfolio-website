@@ -4,9 +4,11 @@ import { useEffect, useMemo, useState } from 'react';
 import styled from '@emotion/styled';
 import Navbar from '@/sections/home/Navbar';
 import { api } from '@/lib/api';
-import { BalanceEntry, ItineraryItemCreate, TripRead } from '@/types';
+import { BalanceEntry, ItineraryItemRead, TripRead } from '@/types';
 import MembersSection from '@/components/tripsync/MembersSection';
 import ExpensesSection from '@/components/tripsync/ExpensesSection';
+import TripDetailsSection from '@/components/tripsync/TripDetailsSection';
+import ItinerarySection from '@/components/tripsync/ItinerarySection';
 import { MockExpense } from '@/lib/mockData';
 
 const PageWrapper = styled.div`
@@ -337,17 +339,18 @@ const parseAccessTokenFromHash = (hash: string): string | null => {
 export default function TripSyncAccessPage() {
   const [trip, setTrip] = useState<TripRead | null>(null);
   const [activeSection, setActiveSection] = useState<
-    'members' | 'itinerary' | 'expenses'
+    'members' | 'details' | 'itinerary' | 'expenses'
   >('members');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [itinerary, setItinerary] = useState<ItineraryItemCreate[]>([]);
+  const [quicklinkEditEnabled, setQuicklinkEditEnabled] = useState(false);
+  const [itinerary, setItinerary] = useState<ItineraryItemRead[]>([]);
   const [expenses, setExpenses] = useState<MockExpense[]>([]);
   const [balances, setBalances] = useState<BalanceEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tripAccessToken, setTripAccessToken] = useState<string | null>(null);
 
-  const sections = useMemo(() => (['members', 'itinerary', 'expenses'] as const), []);
+  const sections = useMemo(() => (['members', 'details', 'itinerary', 'expenses'] as const), []);
 
   const tripSyncOpts = useMemo(
     () => (tripAccessToken ? { tripAccessToken } : undefined),
@@ -437,6 +440,16 @@ export default function TripSyncAccessPage() {
 
   const handleTripUpdate = (updatedTrip: TripRead) => {
     setTrip(updatedTrip);
+  };
+
+  const handleItineraryRefresh = async () => {
+    if (!trip?.id || !tripAccessToken) return;
+    try {
+      const items = await api.listItinerary(trip.id, tripSyncOpts);
+      setItinerary(items);
+    } catch (e) {
+      console.error('Failed to refresh itinerary:', e);
+    }
   };
 
   const handleExpensesUpdate = async () => {
@@ -535,6 +548,35 @@ export default function TripSyncAccessPage() {
                 <Notice>
                   You’re viewing this trip via a share link. Anyone with this link can edit this
                   trip.
+                  <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <button
+                      onClick={() => {
+                        if (!quicklinkEditEnabled) {
+                          const ok = confirm(
+                            'Enable editing for this share link on this device? Anyone with this link can edit this trip.'
+                          );
+                          if (!ok) return;
+                        }
+                        setQuicklinkEditEnabled((v) => !v);
+                      }}
+                      style={{
+                        padding: '0.55rem 0.85rem',
+                        borderRadius: '10px',
+                        border: quicklinkEditEnabled ? 'none' : '1px solid var(--border)',
+                        background: quicklinkEditEnabled ? 'var(--primary)' : 'transparent',
+                        color: quicklinkEditEnabled ? 'white' : 'var(--text)',
+                        cursor: 'pointer',
+                        fontWeight: 800,
+                      }}
+                    >
+                      {quicklinkEditEnabled ? 'Editing enabled' : 'Enable editing'}
+                    </button>
+                    {!quicklinkEditEnabled && (
+                      <span style={{ fontSize: '0.9rem', color: 'var(--muted-text)' }}>
+                        (recommended) Keep disabled unless you intend to change data.
+                      </span>
+                    )}
+                  </div>
                 </Notice>
 
                 {activeSection === 'members' && trip && (
@@ -543,22 +585,27 @@ export default function TripSyncAccessPage() {
                     members={trip.members}
                     onUpdate={handleTripUpdate}
                     tripAccessToken={tripAccessToken ?? undefined}
+                    canEdit={quicklinkEditEnabled}
                   />
                 )}
 
-                {activeSection === 'itinerary' && (
-                  <div>
-                    <ul>
-                      {itinerary.map((i, idx) => (
-                        <li key={idx}>
-                          <strong>{i.title}</strong> — {i.item_type} —{' '}
-                          {new Date(i.start_time).toLocaleString()}
-                          {i.end_time ? ` → ${new Date(i.end_time).toLocaleString()}` : ''}
-                          {i.location ? ` @ ${i.location}` : ''}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                {activeSection === 'details' && trip && (
+                  <TripDetailsSection
+                    tripId={trip.id}
+                    tripAccessToken={tripAccessToken ?? undefined}
+                    canEdit={quicklinkEditEnabled}
+                    onNeedRefresh={handleItineraryRefresh}
+                  />
+                )}
+
+                {activeSection === 'itinerary' && trip && (
+                  <ItinerarySection
+                    tripId={trip.id}
+                    items={itinerary}
+                    tripAccessToken={tripAccessToken ?? undefined}
+                    canEdit={quicklinkEditEnabled}
+                    onRefresh={handleItineraryRefresh}
+                  />
                 )}
 
                 {activeSection === 'expenses' && trip && (
@@ -569,6 +616,7 @@ export default function TripSyncAccessPage() {
                     balances={balances}
                     onUpdate={handleExpensesUpdate}
                     tripAccessToken={tripAccessToken ?? undefined}
+                    canEdit={quicklinkEditEnabled}
                   />
                 )}
               </>
