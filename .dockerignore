@@ -1,0 +1,15 @@
+Dockerfile
+.dockerignore
+node_modules
+npm-debug.log
+.next
+.git
+.gitignore
+README.md
+.env*.local
+.vercel
+cache.txt
+cachejs.txt
+contextr
+portfolio@0.1.0
+extension-image-2.5.8.tgz.1

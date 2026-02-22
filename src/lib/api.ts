@@ -31,10 +31,10 @@ import {
 
 /**
  * API base:
- * - Server: use absolute backend origin from env (required for SSR/node fetch).
- * - Browser: use same-origin `/api/*` and rely on Next rewrites to proxy (avoids CORS).
+ * - Use backend URL from env or fallback to https://backend.sahilpatel.wiki
+ * - Works for both server and browser (backend must have CORS configured)
  */
-const API_ORIGIN = (typeof window === 'undefined' ? process.env.NEXT_PUBLIC_API_URL : '') || '';
+const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL || 'https://backend.sahilpatel.wiki';
 const API_BASE = API_ORIGIN.replace(/\/$/, '');
 const apiUrl = (path: string): string => `${API_BASE}${path}`;
 const AUTH_TOKEN_KEY = 'auth_token';
