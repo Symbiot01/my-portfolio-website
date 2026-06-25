@@ -39,6 +39,8 @@ export interface MockExpense {
   amount?: number | null;
   paid_by_member_id?: string | null;
   split_with_member_ids?: string[] | null;
+  split_type?: 'equal' | 'exact' | null;
+  custom_splits?: { member_id: string; amount: number }[] | null;
   date: string;
   category: string;
 }
