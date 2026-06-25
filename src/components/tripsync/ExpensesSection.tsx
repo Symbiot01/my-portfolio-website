@@ -1910,34 +1910,37 @@ export default function ExpensesSection({
                       </RadioGroup>
 
                       <MemberCheckboxGroup>
+                        <div style={{ marginBottom: '0.8rem' }}>
+                          {splitType === 'custom' && (
+                            <div style={{ padding: '0.6rem', fontSize: '0.95rem', opacity: 0.8, background: 'rgba(0,0,0,0.05)', borderRadius: '8px' }}>
+                              <strong>{members.find(m => m.member_id === paidBy)?.display_name}'s Share (Calculated): </strong>
+                              {formatCurrency(
+                                Math.max(0, (parseFloat(amount || '0') - selectedMembers.filter(m => m !== paidBy).reduce((sum, m) => sum + parseFloat(customAmounts[m] || '0'), 0)))
+                              )}
+                            </div>
+                          )}
+                        </div>
                         {members.map((member) => (
-                          <div key={member.member_id}>
+                          <div key={member.member_id} style={{ display: splitType === 'custom' && member.member_id === paidBy ? 'none' : 'block' }}>
                             <CheckboxLabel>
                               <input
                                 type="checkbox"
-                                checked={selectedMembers.includes(member.member_id)}
+                                checked={splitType === 'custom' ? (member.member_id === paidBy ? true : selectedMembers.includes(member.member_id)) : selectedMembers.includes(member.member_id)}
                                 onChange={() => handleMemberToggle(member.member_id)}
+                                disabled={splitType === 'custom' && member.member_id === paidBy}
                               />
                               {member.display_name}
                             </CheckboxLabel>
                             {splitType === 'custom' && selectedMembers.includes(member.member_id) && (
-                              member.member_id === paidBy ? (
-                                <div style={{ padding: '0.6rem', fontSize: '0.95rem', opacity: 0.8 }}>
-                                  Share: {formatCurrency(
-                                    Math.max(0, (parseFloat(amount || '0') - selectedMembers.filter(m => m !== paidBy).reduce((sum, m) => sum + parseFloat(customAmounts[m] || '0'), 0)))
-                                  )}
-                                </div>
-                              ) : (
-                                <CustomAmountInput
-                                  type="number"
-                                  step="0.01"
-                                  placeholder="Amount"
-                                  value={customAmounts[member.member_id] || ''}
-                                  onChange={(e) =>
-                                    handleCustomAmountChange(member.member_id, e.target.value)
-                                  }
-                                />
-                              )
+                              <CustomAmountInput
+                                type="number"
+                                step="0.01"
+                                placeholder="Amount"
+                                value={customAmounts[member.member_id] || ''}
+                                onChange={(e) =>
+                                  handleCustomAmountChange(member.member_id, e.target.value)
+                                }
+                              />
                             )}
                           </div>
                         ))}
