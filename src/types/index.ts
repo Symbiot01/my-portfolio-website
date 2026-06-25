@@ -92,7 +92,9 @@ export interface ExpenseCreate {
   description: string;
   amount: number;
   paid_by_member_id: string;
-  split_with_member_ids: string[];
+  split_with_member_ids?: string[];
+  split_type?: 'equal' | 'exact';
+  custom_splits?: { member_id: string; amount: number }[];
 }
 
 export interface ExpenseUpdate {
@@ -100,6 +102,8 @@ export interface ExpenseUpdate {
   amount?: number | null;
   paid_by_member_id?: string | null;
   split_with_member_ids?: string[] | null;
+  split_type?: 'equal' | 'exact' | null;
+  custom_splits?: { member_id: string; amount: number }[] | null;
 }
 
 export interface ExpenseRead extends ExpenseUpdate {

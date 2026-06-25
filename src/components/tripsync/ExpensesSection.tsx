@@ -1169,15 +1169,53 @@ export default function ExpensesSection({
       return;
     }
 
+    const totalAmount = parseFloat(amount);
+    let custom_splits: { member_id: string; amount: number }[] | undefined;
+
+    if (splitType === 'custom') {
+      let sumOtherMembers = 0;
+      const exactSplits: { member_id: string; amount: number }[] = [];
+
+      selectedMembers.forEach((memberId) => {
+        if (memberId !== paidBy) {
+          const val = parseFloat(customAmounts[memberId] || '0');
+          sumOtherMembers += val;
+          exactSplits.push({ member_id: memberId, amount: val });
+        }
+      });
+
+      const payerShare = totalAmount - sumOtherMembers;
+      if (payerShare < 0) {
+        alert('Sum of custom amounts cannot exceed total amount.');
+        return;
+      }
+      
+      // Ensure payer is part of exactSplits if they have a non-zero share or are selected
+      if (selectedMembers.includes(paidBy)) {
+        exactSplits.push({ member_id: paidBy, amount: parseFloat(payerShare.toFixed(2)) });
+      }
+
+      // Check validation
+      const totalSplit = exactSplits.reduce((acc, split) => acc + split.amount, 0);
+      if (Math.abs(totalSplit - totalAmount) > 0.01) {
+         alert(`Custom splits do not add up to total amount. Found: ${totalSplit}, Expected: ${totalAmount}`);
+         return;
+      }
+      
+      custom_splits = exactSplits;
+    }
+
     setIsSubmitting(true);
     try {
       if (editingExpenseId) {
         // Update existing expense
         const expenseData = {
           description: description.trim(),
-          amount: parseFloat(amount),
+          amount: totalAmount,
           paid_by_member_id: paidBy,
-          split_with_member_ids: selectedMembers,
+          split_with_member_ids: splitType === 'equal' ? selectedMembers : undefined,
+          split_type: splitType === 'custom' ? 'exact' as const : 'equal' as const,
+          custom_splits: splitType === 'custom' ? custom_splits : undefined,
         };
         await api.updateExpense(
           tripId,
@@ -1190,9 +1228,11 @@ export default function ExpensesSection({
         // Create new expense
         const expenseData: ExpenseCreate = {
           description: description.trim(),
-          amount: parseFloat(amount),
+          amount: totalAmount,
           paid_by_member_id: paidBy,
-          split_with_member_ids: selectedMembers,
+          split_with_member_ids: splitType === 'equal' ? selectedMembers : undefined,
+          split_type: splitType === 'custom' ? 'exact' as const : 'equal' as const,
+          custom_splits: splitType === 'custom' ? custom_splits : undefined,
         };
         await api.addExpense(
           tripId,
@@ -1210,6 +1250,7 @@ export default function ExpensesSection({
       setDate(new Date().toISOString().split('T')[0]);
       setSelectedMembers(members.map((m) => m.member_id));
       setCustomAmounts({});
+      setSplitType('equal');
       setFormExpanded(false);
       
       onUpdate();
@@ -1233,7 +1274,21 @@ export default function ExpensesSection({
     setDescription(expense.description || '');
     setAmount(expense.amount?.toString() || '');
     setPaidBy(expense.paid_by_member_id || members[0]?.member_id || '');
-    setSelectedMembers(expense.split_with_member_ids || []);
+    
+    if (expense.split_type === 'exact' && expense.custom_splits) {
+      setSplitType('custom');
+      setSelectedMembers(expense.custom_splits.map((cs) => cs.member_id));
+      const newCustomAmounts: Record<string, string> = {};
+      expense.custom_splits.forEach((cs) => {
+        newCustomAmounts[cs.member_id] = cs.amount.toString();
+      });
+      setCustomAmounts(newCustomAmounts);
+    } else {
+      setSplitType('equal');
+      setSelectedMembers(expense.split_with_member_ids || []);
+      setCustomAmounts({});
+    }
+    
     setFormExpanded(true);
     
     // Scroll to form
@@ -1719,7 +1774,7 @@ export default function ExpensesSection({
                       </ExpenseHeader>
                       <ExpenseMeta>
                         Paid by <strong>{getMemberName(expense.paid_by_member_id || '')}</strong>{' '}
-                        • Split between {expense.split_with_member_ids?.length || 0} people •{' '}
+                        • Split {expense.split_type === 'exact' ? 'exactly' : 'equally'} between {expense.split_type === 'exact' ? expense.custom_splits?.length || 0 : expense.split_with_member_ids?.length || 0} people •{' '}
                         {formatRelativeDate(expense.date)}
                       </ExpenseMeta>
                     </ExpenseInfo>
@@ -1866,15 +1921,23 @@ export default function ExpensesSection({
                               {member.display_name}
                             </CheckboxLabel>
                             {splitType === 'custom' && selectedMembers.includes(member.member_id) && (
-                              <CustomAmountInput
-                                type="number"
-                                step="0.01"
-                                placeholder="Amount"
-                                value={customAmounts[member.member_id] || ''}
-                                onChange={(e) =>
-                                  handleCustomAmountChange(member.member_id, e.target.value)
-                                }
-                              />
+                              member.member_id === paidBy ? (
+                                <div style={{ padding: '0.6rem', fontSize: '0.95rem', opacity: 0.8 }}>
+                                  Share: {formatCurrency(
+                                    Math.max(0, (parseFloat(amount || '0') - selectedMembers.filter(m => m !== paidBy).reduce((sum, m) => sum + parseFloat(customAmounts[m] || '0'), 0)))
+                                  )}
+                                </div>
+                              ) : (
+                                <CustomAmountInput
+                                  type="number"
+                                  step="0.01"
+                                  placeholder="Amount"
+                                  value={customAmounts[member.member_id] || ''}
+                                  onChange={(e) =>
+                                    handleCustomAmountChange(member.member_id, e.target.value)
+                                  }
+                                />
+                              )
                             )}
                           </div>
                         ))}
