@@ -88,7 +88,7 @@ const EmptyState = styled.div`
 `;
 
 export default function AdminDashboard() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -99,8 +99,8 @@ export default function AdminDashboard() {
       setLoading(true);
       const data = await api.getPendingPosts();
       setPosts(data);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch pending posts');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch pending posts');
     } finally {
       setLoading(false);
     }
@@ -108,7 +108,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (!authLoading && user?.role === 'admin') {
-      fetchPendingPosts();
+      void fetchPendingPosts();
     }
   }, [user, authLoading]);
 
