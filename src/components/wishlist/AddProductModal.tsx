@@ -397,10 +397,18 @@ export function AddProductModal({
         draft.price != null ? 'price' : null,
         draft.title ? 'title' : null,
       ].filter(Boolean);
+      const via =
+        draft.source === 'gemini'
+          ? 'via Gemini AI'
+          : draft.source === 'http_scrape'
+            ? 'via page scrape'
+            : draft.source
+              ? `via ${draft.source}`
+              : '';
       setHint(
         bits.length
-          ? `Fetched ${bits.join(' + ')} from link — review before saving.`
-          : 'Preview returned no fields; enter details manually.'
+          ? `Fetched ${bits.join(' + ')} from link${via ? ` (${via})` : ''} — review before saving.`
+          : `Preview returned no fields${via ? ` (${via})` : ''}; enter details manually.`
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not fetch link details');
