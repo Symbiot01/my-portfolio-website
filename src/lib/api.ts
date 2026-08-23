@@ -27,7 +27,16 @@ import {
   AiProposeEditsResponse,
   AiApplyEditsRequest,
   AiApplyEditsResponse,
-} from '@/types'; 
+  WishlistGroup,
+  WishlistGroupCreate,
+  WishlistGroupUpdate,
+  WishlistProduct,
+  WishlistProductCreate,
+  WishlistProductUpdate,
+  WishlistReserveResponse,
+  WishlistLinkInfo,
+  WishlistPurchaseResponse,
+} from '@/types';
 
 /**
  * API base:
@@ -51,6 +60,13 @@ type TripSyncRequestOptions = {
    * (Backend should reject quicklink writes without this header.)
    */
   tripEdit?: boolean;
+};
+
+type WishlistRequestOptions = {
+  /** Share token for guest access (`X-Wishlist-Access`). */
+  wishlistAccessToken?: string;
+  /** Per-group guest id (`X-Wishlist-Guest`). */
+  wishlistGuestId?: string;
 };
 
 
@@ -77,6 +93,21 @@ const getTripSyncHeaders = (
   if (accessToken) headers['X-Trip-Access'] = accessToken;
   if (opts?.tripEdit) headers['X-Trip-Edit'] = '1';
 
+  return headers;
+};
+
+const getWishlistHeaders = (
+  opts?: WishlistRequestOptions,
+  extra?: Record<string, string>
+): Record<string, string> => {
+  const headers: Record<string, string> = {
+    ...getAuthHeaders(),
+    ...(extra ?? {}),
+  };
+  const accessToken = opts?.wishlistAccessToken?.trim();
+  if (accessToken) headers['X-Wishlist-Access'] = accessToken;
+  const guestId = opts?.wishlistGuestId?.trim();
+  if (guestId) headers['X-Wishlist-Guest'] = guestId;
   return headers;
 };
 
@@ -472,6 +503,334 @@ export const api = {
       throw err;
     }
     return res.json();
+  },
+
+  // ------------------------------------------------------------------
+  // Wishlist
+  // ------------------------------------------------------------------
+
+  createWishlistGroup: async (payload: WishlistGroupCreate): Promise<WishlistGroup> => {
+    const res = await fetch(apiUrl(`/api/wishlist/`), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Failed to create wishlist group');
+    return res.json();
+  },
+
+  getMyWishlistGroups: async (): Promise<WishlistGroup[]> => {
+    const res = await fetch(apiUrl(`/api/wishlist/my`), {
+      headers: getAuthHeaders(),
+      cache: 'no-store',
+    });
+    if (!res.ok) throw new Error('Failed to fetch wishlist groups');
+    return res.json();
+  },
+
+  previewWishlistByAccess: async (accessToken: string): Promise<WishlistGroup> => {
+    const res = await fetch(apiUrl(`/api/wishlist/access/${accessToken}`), {
+      cache: 'no-store',
+    });
+    if (!res.ok) throw new Error('Failed to preview wishlist');
+    return res.json();
+  },
+
+  getWishlistGroup: async (
+    groupId: string,
+    opts?: WishlistRequestOptions
+  ): Promise<WishlistGroup> => {
+    const res = await fetch(apiUrl(`/api/wishlist/${groupId}`), {
+      headers: getWishlistHeaders(opts),
+      cache: 'no-store',
+    });
+    if (!res.ok) throw new Error('Failed to fetch wishlist group');
+    return res.json();
+  },
+
+  updateWishlistGroup: async (
+    groupId: string,
+    payload: WishlistGroupUpdate
+  ): Promise<WishlistGroup> => {
+    const res = await fetch(apiUrl(`/api/wishlist/${groupId}`), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const detail = await res.json().catch(() => null);
+      throw new Error(detail?.detail || 'Failed to update group settings');
+    }
+    return res.json();
+  },
+
+  deleteWishlistGroup: async (groupId: string): Promise<void> => {
+    const res = await fetch(apiUrl(`/api/wishlist/${groupId}`), {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to delete group');
+  },
+
+  unlinkWishlistMember: async (groupId: string, memberId: string): Promise<WishlistGroup> => {
+    const res = await fetch(apiUrl(`/api/wishlist/${groupId}/members/${memberId}/unlink`), {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to remove member');
+    return res.json();
+  },
+
+  removeWishlistMember: async (groupId: string, memberId: string): Promise<WishlistGroup> => {
+    const res = await fetch(apiUrl(`/api/wishlist/${groupId}/members/${memberId}`), {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) {
+      const detail = await res.json().catch(() => null);
+      throw new Error(detail?.detail || 'Failed to remove member slot');
+    }
+    return res.json();
+  },
+
+  listWishlistProducts: async (
+    groupId: string,
+    opts?: WishlistRequestOptions & { ownerMemberId?: string }
+  ): Promise<WishlistProduct[]> => {
+    const qs = opts?.ownerMemberId
+      ? `?owner_member_id=${encodeURIComponent(opts.ownerMemberId)}`
+      : '';
+    const res = await fetch(apiUrl(`/api/wishlist/${groupId}/products${qs}`), {
+      headers: getWishlistHeaders(opts),
+      cache: 'no-store',
+    });
+    if (!res.ok) throw new Error('Failed to list wishlist products');
+    return res.json();
+  },
+
+  addWishlistMember: async (
+    groupId: string,
+    displayName: string,
+    opts?: WishlistRequestOptions
+  ): Promise<WishlistGroup> => {
+    const res = await fetch(apiUrl(`/api/wishlist/${groupId}/members`), {
+      method: 'POST',
+      headers: getWishlistHeaders(opts, { 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ display_name: displayName }),
+    });
+    if (!res.ok) throw new Error('Failed to add member');
+    return res.json();
+  },
+
+  linkSelfWishlistMember: async (
+    groupId: string,
+    memberId?: string
+  ): Promise<WishlistGroup> => {
+    const res = await fetch(apiUrl(`/api/wishlist/${groupId}/members/link-self`), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({ member_id: memberId ?? null }),
+    });
+    if (!res.ok) throw new Error('Failed to link self');
+    return res.json();
+  },
+
+  leaveWishlistGroup: async (groupId: string): Promise<void> => {
+    const res = await fetch(apiUrl(`/api/wishlist/${groupId}/leave`), {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to leave group');
+  },
+
+  getWishlistLink: async (groupId: string): Promise<WishlistLinkInfo> => {
+    const res = await fetch(apiUrl(`/api/wishlist/${groupId}/link`), {
+      headers: getAuthHeaders(),
+      cache: 'no-store',
+    });
+    if (!res.ok) throw new Error('Failed to get share link');
+    return res.json();
+  },
+
+  rotateWishlistLink: async (groupId: string): Promise<WishlistLinkInfo> => {
+    const res = await fetch(apiUrl(`/api/wishlist/${groupId}/rotate-link`), {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to rotate link');
+    return res.json();
+  },
+
+  revokeWishlistLink: async (groupId: string): Promise<void> => {
+    const res = await fetch(apiUrl(`/api/wishlist/${groupId}/revoke-link`), {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to revoke link');
+  },
+
+  addWishlistProduct: async (
+    groupId: string,
+    memberId: string,
+    payload: WishlistProductCreate,
+    opts?: WishlistRequestOptions
+  ): Promise<WishlistProduct> => {
+    const res = await fetch(
+      apiUrl(`/api/wishlist/${groupId}/members/${memberId}/products`),
+      {
+        method: 'POST',
+        headers: getWishlistHeaders(opts, { 'Content-Type': 'application/json' }),
+        body: JSON.stringify(payload),
+      }
+    );
+    if (!res.ok) throw new Error('Failed to add product');
+    return res.json();
+  },
+
+  updateWishlistProduct: async (
+    groupId: string,
+    productId: string,
+    payload: WishlistProductUpdate,
+    opts?: WishlistRequestOptions
+  ): Promise<WishlistProduct> => {
+    const res = await fetch(apiUrl(`/api/wishlist/${groupId}/products/${productId}`), {
+      method: 'PATCH',
+      headers: getWishlistHeaders(opts, { 'Content-Type': 'application/json' }),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const detail = await res.json().catch(() => null);
+      const msg =
+        typeof detail?.detail === 'string'
+          ? detail.detail
+          : 'Failed to update product (only open items; creator or leader)';
+      throw new Error(msg);
+    }
+    return res.json();
+  },
+
+  deleteWishlistProduct: async (
+    groupId: string,
+    productId: string,
+    opts?: WishlistRequestOptions
+  ): Promise<void> => {
+    const res = await fetch(apiUrl(`/api/wishlist/${groupId}/products/${productId}`), {
+      method: 'DELETE',
+      headers: getWishlistHeaders(opts),
+    });
+    if (!res.ok) throw new Error('Failed to delete product');
+  },
+
+  reserveWishlistProduct: async (
+    groupId: string,
+    productId: string,
+    reservedAsName: string,
+    opts?: WishlistRequestOptions
+  ): Promise<WishlistReserveResponse> => {
+    const res = await fetch(
+      apiUrl(`/api/wishlist/${groupId}/products/${productId}/reserve`),
+      {
+        method: 'POST',
+        headers: getWishlistHeaders(opts, { 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ reserved_as_name: reservedAsName }),
+      }
+    );
+    if (!res.ok) {
+      const err = new Error('Failed to reserve product') as Error & { status?: number };
+      err.status = res.status;
+      throw err;
+    }
+    return res.json();
+  },
+
+  releaseWishlistReservation: async (
+    groupId: string,
+    reservationId: string,
+    opts?: WishlistRequestOptions
+  ): Promise<void> => {
+    const res = await fetch(
+      apiUrl(`/api/wishlist/${groupId}/reservations/${reservationId}/release`),
+      {
+        method: 'POST',
+        headers: getWishlistHeaders(opts),
+      }
+    );
+    if (!res.ok) throw new Error('Failed to release reservation');
+  },
+
+  purchaseWishlistReservation: async (
+    groupId: string,
+    reservationId: string,
+    opts?: WishlistRequestOptions
+  ): Promise<WishlistPurchaseResponse> => {
+    const res = await fetch(
+      apiUrl(`/api/wishlist/${groupId}/reservations/${reservationId}/purchase`),
+      {
+        method: 'POST',
+        headers: getWishlistHeaders(opts, { 'Content-Type': 'application/json' }),
+        body: JSON.stringify({}),
+      }
+    );
+    if (!res.ok) {
+      const err = new Error('Failed to mark bought') as Error & { status?: number };
+      err.status = res.status;
+      throw err;
+    }
+    return res.json();
+  },
+
+  register: async (
+    email: string,
+    password: string,
+    username: string
+  ): Promise<void> => {
+    const res = await fetch(apiUrl(`/api/auth/register`), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, username }),
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(body || 'Registration failed');
+    }
+  },
+
+  // ------------------------------------------------------------------
+  // Admin Endpoints
+  // ------------------------------------------------------------------
+
+  getPendingPosts: async (): Promise<BlogPost[]> => {
+    const res = await fetch(apiUrl('/api/admin/posts/pending'), {
+      headers: { ...getAuthHeaders() },
+      cache: 'no-store',
+    });
+    if (!res.ok) throw new Error('Failed to fetch pending posts');
+    return res.json();
+  },
+
+  updatePostStatus: async (postId: string, status: 'published' | 'rejected' | 'draft' | 'pending_review'): Promise<BlogPost> => {
+    const res = await fetch(apiUrl(`/api/admin/posts/${postId}/status?status=${status}`), {
+      method: 'PATCH',
+      headers: { ...getAuthHeaders() },
+    });
+    if (!res.ok) throw new Error(`Failed to update post status to ${status}`);
+    return res.json();
+  },
+
+  deletePostAdmin: async (postId: string): Promise<void> => {
+    const res = await fetch(apiUrl(`/api/admin/posts/${postId}`), {
+      method: 'DELETE',
+      headers: { ...getAuthHeaders() },
+    });
+    if (!res.ok) throw new Error('Failed to delete post');
+  },
+
+  deleteCommentAdmin: async (commentId: string): Promise<void> => {
+    const res = await fetch(apiUrl(`/api/admin/comments/${commentId}`), {
+      method: 'DELETE',
+      headers: { ...getAuthHeaders() },
+    });
+    if (!res.ok) throw new Error('Failed to delete comment');
   },
 
   // We will add getProjects, getSkills, etc. here in the future.
