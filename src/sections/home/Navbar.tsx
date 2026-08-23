@@ -185,6 +185,8 @@ export default function Navbar() {
       { label: 'Research', href: '#research' },
       { label: 'Gallery', href: '#gallery' },
       { label: 'Blog', href: '/blog' },
+      { label: 'TripSync', href: '/tripsync' },
+      { label: 'Wishlist', href: '/wishlist' },
       { label: 'About', href: '#about' },
       { label: 'Contact', href: '#contact' },
     ],

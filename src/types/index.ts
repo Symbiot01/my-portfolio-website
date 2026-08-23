@@ -18,6 +18,7 @@ export interface BlogPost {
   cover_image_url?: string;
   excerpt?: string;
   tags?: string[];
+  status?: string;
   createdAt: string;
 }
 export interface Comment {
@@ -220,4 +221,104 @@ export interface AiApplyEditsResponse {
   created_item_ids?: string[];
   updated_item_ids?: string[];
   deleted_item_ids?: string[];
+}
+
+// --- Wishlist Types ---
+export interface WishlistMemberInfo {
+  member_id: string;
+  display_name: string;
+  linked: boolean;
+  is_leader: boolean;
+  is_you?: boolean;
+}
+
+export interface WishlistSettings {
+  owners_can_see_fulfillment: boolean;
+  max_active_reservations: number;
+}
+
+export interface WishlistGroup {
+  id: string;
+  name: string;
+  description?: string | null;
+  members: WishlistMemberInfo[];
+  settings: WishlistSettings;
+  leader_member_id: string;
+  link_revoked: boolean;
+  secret_access_url?: string | null;
+  member_cap?: number;
+}
+
+export interface WishlistGroupCreate {
+  name: string;
+  description?: string | null;
+  owners_can_see_fulfillment: boolean;
+  max_active_reservations?: number;
+}
+
+export interface WishlistGroupUpdate {
+  name?: string;
+  description?: string | null;
+  owners_can_see_fulfillment?: boolean;
+  max_active_reservations?: number;
+}
+
+export interface WishlistProductOption {
+  option_id?: string;
+  title: string;
+  url?: string | null;
+  notes?: string | null;
+  price?: number | null;
+  currency?: string | null;
+  image_url?: string | null;
+}
+
+export interface WishlistReservationInfo {
+  reservation_id?: string | null;
+  reserved_as_name?: string | null;
+  expires_at?: string | null;
+}
+
+export interface WishlistProduct {
+  id: string;
+  group_id: string;
+  owner_member_id: string;
+  title: string;
+  description?: string | null;
+  options: WishlistProductOption[];
+  status: 'open' | 'reserved' | 'bought';
+  created_by_actor_key: string;
+  reservation?: WishlistReservationInfo | null;
+}
+
+export interface WishlistProductCreate {
+  title: string;
+  description?: string | null;
+  options: WishlistProductOption[];
+}
+
+export interface WishlistProductUpdate {
+  title?: string;
+  description?: string | null;
+  options?: WishlistProductOption[];
+}
+
+export interface WishlistReserveResponse {
+  reservation_id: string;
+  guest_id?: string | null;
+  expires_at: string;
+  reserved_as_name: string;
+}
+
+export interface WishlistLinkInfo {
+  secret_access_url: string;
+  link_revoked: boolean;
+  access_token: string;
+}
+
+export interface WishlistPurchaseResponse {
+  purchase_id: string;
+  product_id: string;
+  reservation_id: string;
+  bought_at: string;
 }
