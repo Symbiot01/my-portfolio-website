@@ -299,6 +299,49 @@ const CompactFields = styled.div`
   gap: 6px;
 `;
 
+const CandidateWrap = styled.div`
+  margin-top: ${wl.space(1.5)};
+`;
+
+const CandidateLabel = styled.p`
+  margin: 0 0 ${wl.space(1)};
+  font: ${wl.font.labelSm};
+  color: ${wl.inkMuted};
+`;
+
+const CandidateGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+
+  @media (max-width: 720px) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+`;
+
+const CandidateBtn = styled.button<{ $selected?: boolean }>`
+  appearance: none;
+  border: 2px solid ${({ $selected }) => ($selected ? wl.primaryDeep : wl.border)};
+  border-radius: ${wl.radiusSm}px;
+  padding: 0;
+  overflow: hidden;
+  aspect-ratio: 1;
+  cursor: pointer;
+  background: ${wl.surface};
+  box-shadow: ${({ $selected }) => ($selected ? wl.shadow : 'none')};
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  &:hover {
+    border-color: ${wl.primary};
+  }
+`;
+
 export function AddProductModal({
   open,
   onClose,
@@ -322,11 +365,13 @@ export function AddProductModal({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
+  const [imageCandidates, setImageCandidates] = useState<string[]>([]);
 
   useEffect(() => {
     if (!open) return;
     setError(null);
     setHint(null);
+    setImageCandidates([]);
     if (editing) {
       setOwnerId(editing.owner_member_id);
       setTitle(editing.title);
@@ -371,35 +416,48 @@ export function AddProductModal({
     setFetchingIdx(idx);
     setError(null);
     setHint(null);
+    setImageCandidates([]);
     try {
       const draft = await api.previewWishlistUrl(groupId, url, {
         wishlistAccessToken,
         wishlistGuestId,
       });
+      const fromScrape = draft.source === 'http_scrape';
       setOptions((prev) =>
         prev.map((o, i) => {
           if (i !== idx) return o;
           return {
             title: o.title.trim() || draft.title || o.title,
             url: draft.url || o.url,
-            price: o.price.trim() || (draft.price != null ? String(draft.price) : o.price),
+            // Only trust price from real page scrape — AI invents bad prices.
+            price:
+              fromScrape && !o.price.trim() && draft.price != null
+                ? String(draft.price)
+                : o.price,
           };
         })
       );
-      if (draft.image_url) {
+      if (fromScrape && draft.image_url) {
         setImageUrl((prev) => prev || draft.image_url || null);
       }
       if (!title.trim() && draft.title) {
         setTitle(draft.title);
       }
+      const candidates = (draft.image_candidates || []).filter(Boolean).slice(0, 10);
+      setImageCandidates(candidates);
+      if (!fromScrape && !imageUrl && candidates[0]) {
+        // Don't auto-select — user picks. Hint explains.
+      }
+
       const bits = [
-        draft.image_url ? 'image' : null,
-        draft.price != null ? 'price' : null,
+        fromScrape && draft.image_url ? 'image' : null,
+        fromScrape && draft.price != null ? 'price' : null,
         draft.title ? 'title' : null,
+        candidates.length ? `${candidates.length} photo options` : null,
       ].filter(Boolean);
       const via =
-        draft.source === 'gemini'
-          ? 'via Gemini AI'
+        draft.source === 'gemini' || draft.source === 'gemini+images'
+          ? 'via Gemini + image search'
           : draft.source === 'http_scrape'
             ? 'via page scrape'
             : draft.source
@@ -407,8 +465,12 @@ export function AddProductModal({
               : '';
       setHint(
         bits.length
-          ? `Fetched ${bits.join(' + ')} from link${via ? ` (${via})` : ''} — review before saving.`
-          : `Preview returned no fields${via ? ` (${via})` : ''}; enter details manually.`
+          ? `Fetched ${bits.join(' + ')}${via ? ` (${via})` : ''}. ${
+              candidates.length
+                ? 'Pick a photo below — price left blank unless scraped.'
+                : 'Review before saving.'
+            }`
+          : draft.notes || 'Preview returned no fields; enter details manually.'
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not fetch link details');
@@ -495,6 +557,7 @@ export function AddProductModal({
 
         <form onSubmit={handleSubmit}>
           <DesktopGrid>
+            <div>
             <ImageDrop>
               {imageUrl ? <img src={imageUrl} alt="" /> : null}
               {!imageUrl && (
@@ -511,6 +574,26 @@ export function AddProductModal({
               />
               {uploading && <span>Uploading…</span>}
             </ImageDrop>
+
+            {imageCandidates.length > 0 && (
+              <CandidateWrap>
+                <CandidateLabel>Choose a product photo ({imageCandidates.length})</CandidateLabel>
+                <CandidateGrid>
+                  {imageCandidates.map((src) => (
+                    <CandidateBtn
+                      key={src}
+                      type="button"
+                      $selected={imageUrl === src}
+                      onClick={() => setImageUrl(src)}
+                      aria-label="Select product photo"
+                    >
+                      <img src={src} alt="" loading="lazy" referrerPolicy="no-referrer" />
+                    </CandidateBtn>
+                  ))}
+                </CandidateGrid>
+              </CandidateWrap>
+            )}
+            </div>
 
             <div>
               <DesktopTitle>

@@ -311,6 +311,7 @@ export interface WishlistUrlPreview {
   price?: number | null;
   currency?: string | null;
   image_url?: string | null;
+  image_candidates?: string[];
   notes?: string | null;
   source?: string | null;
 }
