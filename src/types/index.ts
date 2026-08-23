@@ -303,6 +303,16 @@ export interface WishlistProductUpdate {
   options?: WishlistProductOption[];
 }
 
+export interface WishlistUrlPreview {
+  title?: string | null;
+  url: string;
+  price?: number | null;
+  currency?: string | null;
+  image_url?: string | null;
+  notes?: string | null;
+  source?: string | null;
+}
+
 export interface WishlistReserveResponse {
   reservation_id: string;
   guest_id?: string | null;

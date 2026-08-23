@@ -51,11 +51,15 @@ const Members = styled.p`
 export default function WishlistAccessPage() {
   const params = useParams<{ token: string }>();
   const router = useRouter();
-  const token = params.token;
+  const token = params?.token ?? '';
   const [group, setGroup] = useState<WishlistGroup | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!token) {
+      setError('Invalid or revoked share link');
+      return;
+    }
     (async () => {
       try {
         const g = await api.previewWishlistByAccess(token);
@@ -68,7 +72,7 @@ export default function WishlistAccessPage() {
   }, [token]);
 
   const openGroup = () => {
-    if (!group) return;
+    if (!group || !token) return;
     router.push(`/wishlist/${group.id}?access_token=${encodeURIComponent(token)}`);
   };
 

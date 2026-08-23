@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import styled from '@emotion/styled';
-import { Camera, Plus, Save, X } from 'lucide-react';
+import { Camera, Link2, Plus, Save, X } from 'lucide-react';
 import { wl } from '@/styles/wishlistTheme';
 import { api } from '@/lib/api';
 import { WishlistMemberInfo, WishlistProduct, WishlistProductCreate } from '@/types';
@@ -13,8 +13,11 @@ type StoreOptionDraft = { title: string; url: string; price: string };
 type Props = {
   open: boolean;
   onClose: () => void;
+  groupId: string;
   members: WishlistMemberInfo[];
   defaultMemberId?: string;
+  wishlistAccessToken?: string;
+  wishlistGuestId?: string;
   /** When set, modal edits this open product instead of creating. */
   editing?: WishlistProduct | null;
   onSubmit: (payload: WishlistProductCreate & { owner_member_id: string }) => Promise<void>;
@@ -266,6 +269,31 @@ const LinkBtn = styled.button`
   gap: 4px;
 `;
 
+const UrlRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  align-items: center;
+`;
+
+const FetchBtn = styled.button`
+  border: 1px solid ${wl.primaryDeep};
+  background: ${wl.primarySoft};
+  color: ${wl.primaryDeep};
+  border-radius: ${wl.radiusSm}px;
+  padding: 8px 10px;
+  font: ${wl.font.labelSm};
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+`;
+
 const CompactFields = styled.div`
   display: grid;
   gap: 6px;
@@ -274,8 +302,11 @@ const CompactFields = styled.div`
 export function AddProductModal({
   open,
   onClose,
+  groupId,
   members,
   defaultMemberId,
+  wishlistAccessToken,
+  wishlistGuestId,
   editing,
   onSubmit,
   onUpdate,
@@ -287,12 +318,15 @@ export function AddProductModal({
   const [options, setOptions] = useState<StoreOptionDraft[]>([{ title: '', url: '', price: '' }]);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [fetchingIdx, setFetchingIdx] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hint, setHint] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setError(null);
+    setHint(null);
     if (editing) {
       setOwnerId(editing.owner_member_id);
       setTitle(editing.title);
@@ -327,6 +361,53 @@ export function AddProductModal({
   };
 
   const addOption = () => setOptions((p) => [...p, { title: '', url: '', price: '' }]);
+
+  const fetchFromUrl = async (idx: number) => {
+    const url = options[idx]?.url?.trim();
+    if (!url) {
+      setError('Paste a store URL first');
+      return;
+    }
+    setFetchingIdx(idx);
+    setError(null);
+    setHint(null);
+    try {
+      const draft = await api.previewWishlistUrl(groupId, url, {
+        wishlistAccessToken,
+        wishlistGuestId,
+      });
+      setOptions((prev) =>
+        prev.map((o, i) => {
+          if (i !== idx) return o;
+          return {
+            title: o.title.trim() || draft.title || o.title,
+            url: draft.url || o.url,
+            price: o.price.trim() || (draft.price != null ? String(draft.price) : o.price),
+          };
+        })
+      );
+      if (draft.image_url) {
+        setImageUrl((prev) => prev || draft.image_url || null);
+      }
+      if (!title.trim() && draft.title) {
+        setTitle(draft.title);
+      }
+      const bits = [
+        draft.image_url ? 'image' : null,
+        draft.price != null ? 'price' : null,
+        draft.title ? 'title' : null,
+      ].filter(Boolean);
+      setHint(
+        bits.length
+          ? `Fetched ${bits.join(' + ')} from link — review before saving.`
+          : 'Preview returned no fields; enter details manually.'
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not fetch link details');
+    } finally {
+      setFetchingIdx(null);
+    }
+  };
 
   const onFile = async (file: File | null) => {
     if (!file) return;
@@ -487,11 +568,26 @@ export function AddProductModal({
                       value={o.title}
                       onChange={(e) => updateOption(idx, { title: e.target.value })}
                     />
-                    <StoreInput
-                      placeholder="https://…"
-                      value={o.url}
-                      onChange={(e) => updateOption(idx, { url: e.target.value })}
-                    />
+                    <UrlRow>
+                      <StoreInput
+                        placeholder="https://…"
+                        value={o.url}
+                        onChange={(e) => updateOption(idx, { url: e.target.value })}
+                        onBlur={() => {
+                          if (o.url.trim().startsWith('http') && !o.title.trim() && !o.price.trim()) {
+                            void fetchFromUrl(idx);
+                          }
+                        }}
+                      />
+                      <FetchBtn
+                        type="button"
+                        disabled={fetchingIdx !== null || !o.url.trim()}
+                        onClick={() => void fetchFromUrl(idx)}
+                      >
+                        <Link2 size={14} />
+                        {fetchingIdx === idx ? '…' : 'Fetch'}
+                      </FetchBtn>
+                    </UrlRow>
                     <StoreInput
                       placeholder="Price (optional)"
                       value={o.price}
@@ -520,11 +616,26 @@ export function AddProductModal({
                         value={o.title}
                         onChange={(e) => updateOption(idx, { title: e.target.value })}
                       />
-                      <StoreInput
-                        placeholder="https://"
-                        value={o.url}
-                        onChange={(e) => updateOption(idx, { url: e.target.value })}
-                      />
+                      <UrlRow>
+                        <StoreInput
+                          placeholder="https://"
+                          value={o.url}
+                          onChange={(e) => updateOption(idx, { url: e.target.value })}
+                          onBlur={() => {
+                            if (o.url.trim().startsWith('http') && !o.title.trim() && !o.price.trim()) {
+                              void fetchFromUrl(idx);
+                            }
+                          }}
+                        />
+                        <FetchBtn
+                          type="button"
+                          disabled={fetchingIdx !== null || !o.url.trim()}
+                          onClick={() => void fetchFromUrl(idx)}
+                        >
+                          <Link2 size={14} />
+                          {fetchingIdx === idx ? '…' : 'Fetch'}
+                        </FetchBtn>
+                      </UrlRow>
                     </CompactFields>
                     <StoreInput
                       placeholder="Price"
@@ -547,6 +658,9 @@ export function AddProductModal({
                   <Save size={16} /> {busy ? 'Saving…' : isEdit ? 'Save Changes' : 'Save Product'}
                 </WlPrimaryButton>
               </Footer>
+              {hint && (
+                <p style={{ color: wl.secondary, font: wl.font.bodySm, marginTop: wl.space(1) }}>{hint}</p>
+              )}
               {error && (
                 <p style={{ color: wl.danger, font: wl.font.bodySm, marginTop: wl.space(1) }}>{error}</p>
               )}

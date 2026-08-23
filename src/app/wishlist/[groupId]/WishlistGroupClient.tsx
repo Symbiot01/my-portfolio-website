@@ -411,8 +411,11 @@ export default function WishlistGroupPage() {
             setAddOpen(false);
             setEditingProduct(null);
           }}
+          groupId={groupId}
           members={group.members}
           defaultMemberId={targetMemberId || myMemberId || undefined}
+          wishlistAccessToken={accessToken || undefined}
+          wishlistGuestId={guestId || undefined}
           editing={editingProduct}
           onSubmit={onAddProduct}
           onUpdate={onUpdateProduct}
