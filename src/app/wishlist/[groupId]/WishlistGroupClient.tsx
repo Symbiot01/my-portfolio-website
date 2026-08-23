@@ -7,6 +7,7 @@ import { Plus } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
 import {
+  ensureWishlistGuestId,
   getStoredWishlistAccess,
   getWishlistGuestId,
   setStoredWishlistAccess,
@@ -131,6 +132,7 @@ export default function WishlistGroupPage() {
   const [products, setProducts] = useState<WishlistProduct[]>([]);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [guestId, setGuestId] = useState<string | null>(null);
+  const [accessReady, setAccessReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -156,7 +158,8 @@ export default function WishlistGroupPage() {
       setGroup(g);
       if (!targetMemberId && g.members[0]) setTargetMemberId(g.members[0].member_id);
       setProducts(await api.listWishlistProducts(groupId, opts));
-      if (user) {
+      const linked = g.members.some((m) => m.is_you);
+      if (linked) {
         try {
           const link = await api.getWishlistLink(groupId);
           const origin = typeof window !== 'undefined' ? window.location.origin : '';
@@ -164,30 +167,47 @@ export default function WishlistGroupPage() {
           setAccessToken(String(link.access_token));
           setStoredWishlistAccess(groupId, String(link.access_token));
         } catch {
-          /* not linked */
+          /* link fetch is member-only */
         }
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load group');
     }
-  }, [groupId, opts, targetMemberId, user]);
+  }, [groupId, opts, targetMemberId]);
 
   useEffect(() => {
     if (!groupId) return;
-    const fromQuery = searchParams?.get('access_token');
+    // Prefer live URL over useSearchParams — avoids a first paint without ?access_token
+    // that causes a 403 for logged-in users who are not linked members.
+    const fromWindow =
+      typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search).get('access_token')
+        : null;
+    const fromQuery = searchParams?.get('access_token') || fromWindow;
     const stored = getStoredWishlistAccess(groupId);
     const token = fromQuery || stored;
     if (token) {
       setAccessToken(token);
       setStoredWishlistAccess(groupId, token);
+      // Guests need a stable id before create/reserve mutations.
+      setGuestId(ensureWishlistGuestId(groupId));
+    } else {
+      setGuestId(getWishlistGuestId(groupId));
     }
-    setGuestId(getWishlistGuestId(groupId));
+    setAccessReady(true);
   }, [groupId, searchParams]);
 
   useEffect(() => {
-    refresh();
+    if (!accessReady || !groupId) return;
+    // Skip the first fetch until share token (if present in the URL) is in state.
+    const urlToken =
+      typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search).get('access_token')
+        : null;
+    if (urlToken && !accessToken) return;
+    void refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groupId, accessToken, user]);
+  }, [groupId, accessToken, user, accessReady]);
 
   const myMember = useMemo(() => group?.members.find((m) => m.is_you) || null, [group]);
   const isLeader = !!myMember?.is_leader;
@@ -229,7 +249,19 @@ export default function WishlistGroupPage() {
 
   const onAddProduct = async (payload: WishlistProductCreate & { owner_member_id: string }) => {
     const { owner_member_id, ...body } = payload;
-    await api.addWishlistProduct(groupId, owner_member_id, body, opts);
+    // Ensure guest header is present even if state lagged behind localStorage.
+    const ensuredGuest =
+      accessToken && !guestId ? ensureWishlistGuestId(groupId) : guestId;
+    if (ensuredGuest && ensuredGuest !== guestId) setGuestId(ensuredGuest);
+    const requestOpts = {
+      wishlistAccessToken: accessToken || undefined,
+      wishlistGuestId: ensuredGuest || undefined,
+    };
+    const created = await api.addWishlistProduct(groupId, owner_member_id, body, requestOpts);
+    if (created.guest_id) {
+      setWishlistGuestId(groupId, created.guest_id);
+      setGuestId(created.guest_id);
+    }
     setTargetMemberId(owner_member_id);
     await refresh();
   };
