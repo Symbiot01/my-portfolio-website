@@ -36,6 +36,7 @@ import {
   WishlistReserveResponse,
   WishlistLinkInfo,
   WishlistPurchaseResponse,
+  WishlistUrlPreview,
 } from '@/types';
 
 /**
@@ -704,6 +705,27 @@ export const api = {
         typeof detail?.detail === 'string'
           ? detail.detail
           : 'Failed to update product (only open items; creator or leader)';
+      throw new Error(msg);
+    }
+    return res.json();
+  },
+
+  previewWishlistUrl: async (
+    groupId: string,
+    url: string,
+    opts?: WishlistRequestOptions
+  ): Promise<WishlistUrlPreview> => {
+    const res = await fetch(apiUrl(`/api/wishlist/${groupId}/preview-url`), {
+      method: 'POST',
+      headers: getWishlistHeaders(opts, { 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ url }),
+    });
+    if (!res.ok) {
+      const detail = await res.json().catch(() => null);
+      const msg =
+        typeof detail?.detail === 'string'
+          ? detail.detail
+          : 'Could not extract product details from that link';
       throw new Error(msg);
     }
     return res.json();
