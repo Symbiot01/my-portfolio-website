@@ -289,6 +289,8 @@ export interface WishlistProduct {
   status: 'open' | 'reserved' | 'bought';
   created_by_actor_key: string;
   reservation?: WishlistReservationInfo | null;
+  /** Returned when the server mints a guest id for share-link creators. */
+  guest_id?: string | null;
 }
 
 export interface WishlistProductCreate {

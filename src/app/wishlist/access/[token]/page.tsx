@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import styled from '@emotion/styled';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { setStoredWishlistAccess } from '@/lib/wishlistGuest';
+import { setStoredWishlistAccess, ensureWishlistGuestId } from '@/lib/wishlistGuest';
 import { WishlistGroup } from '@/types';
 import { wl } from '@/styles/wishlistTheme';
 import { WishlistAppShell } from '@/components/wishlist/WishlistAppShell';
@@ -65,6 +65,7 @@ export default function WishlistAccessPage() {
         const g = await api.previewWishlistByAccess(token);
         setGroup(g);
         setStoredWishlistAccess(g.id, token);
+        ensureWishlistGuestId(g.id);
       } catch {
         setError('Invalid or revoked share link');
       }

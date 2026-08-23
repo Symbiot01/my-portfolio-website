@@ -545,7 +545,12 @@ export const api = {
       headers: getWishlistHeaders(opts),
       cache: 'no-store',
     });
-    if (!res.ok) throw new Error('Failed to fetch wishlist group');
+    if (!res.ok) {
+      const detail = await res.json().catch(() => null);
+      const msg =
+        typeof detail?.detail === 'string' ? detail.detail : 'Failed to fetch wishlist group';
+      throw new Error(msg);
+    }
     return res.json();
   },
 
@@ -684,7 +689,12 @@ export const api = {
         body: JSON.stringify(payload),
       }
     );
-    if (!res.ok) throw new Error('Failed to add product');
+    if (!res.ok) {
+      const detail = await res.json().catch(() => null);
+      const msg =
+        typeof detail?.detail === 'string' ? detail.detail : 'Failed to add product';
+      throw new Error(msg);
+    }
     return res.json();
   },
 
