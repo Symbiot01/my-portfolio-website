@@ -311,11 +311,11 @@ const CandidateLabel = styled.p`
 
 const CandidateGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 6px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
 
   @media (max-width: 720px) {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 `;
 
@@ -327,7 +327,8 @@ const CandidateBtn = styled.button<{ $selected?: boolean }>`
   overflow: hidden;
   aspect-ratio: 1;
   cursor: pointer;
-  background: ${wl.surface};
+  background: ${wl.canvas};
+  min-height: 64px;
   box-shadow: ${({ $selected }) => ($selected ? wl.shadow : 'none')};
 
   img {
@@ -335,6 +336,7 @@ const CandidateBtn = styled.button<{ $selected?: boolean }>`
     height: 100%;
     object-fit: cover;
     display: block;
+    background: ${wl.border};
   }
 
   &:hover {
@@ -445,33 +447,39 @@ export function AddProductModal({
       }
       const candidates = (draft.image_candidates || []).filter(Boolean).slice(0, 10);
       setImageCandidates(candidates);
-      if (!fromScrape && !imageUrl && candidates[0]) {
-        // Don't auto-select — user picks. Hint explains.
+      // Preselect first so the photo area isn't empty; user can change in the grid.
+      if (candidates.length) {
+        setImageUrl((prev) => prev || candidates[0]);
       }
 
       const bits = [
         fromScrape && draft.image_url ? 'image' : null,
         fromScrape && draft.price != null ? 'price' : null,
         draft.title ? 'title' : null,
-        candidates.length ? `${candidates.length} photo options` : null,
+        candidates.length ? `${candidates.length} photos` : null,
       ].filter(Boolean);
       const via =
         draft.source === 'gemini' || draft.source === 'gemini+images'
-          ? 'via Gemini + image search'
+          ? 'Gemini + Google images'
           : draft.source === 'http_scrape'
-            ? 'via page scrape'
-            : draft.source
-              ? `via ${draft.source}`
-              : '';
+            ? 'page scrape'
+            : draft.source || '';
       setHint(
         bits.length
-          ? `Fetched ${bits.join(' + ')}${via ? ` (${via})` : ''}. ${
-              candidates.length
-                ? 'Pick a photo below — price left blank unless scraped.'
-                : 'Review before saving.'
+          ? `Fetched ${bits.join(' + ')}${via ? ` (${via})` : ''}.${
+              candidates.length ? ' Tap a photo below to select.' : ' Review before saving.'
             }`
           : draft.notes || 'Preview returned no fields; enter details manually.'
       );
+      // Scroll picker into view after paint
+      if (candidates.length) {
+        requestAnimationFrame(() => {
+          document.getElementById('wishlist-image-picker')?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest',
+          });
+        });
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not fetch link details');
     } finally {
@@ -576,7 +584,7 @@ export function AddProductModal({
             </ImageDrop>
 
             {imageCandidates.length > 0 && (
-              <CandidateWrap>
+              <CandidateWrap id="wishlist-image-picker">
                 <CandidateLabel>Choose a product photo ({imageCandidates.length})</CandidateLabel>
                 <CandidateGrid>
                   {imageCandidates.map((src) => (
@@ -586,8 +594,20 @@ export function AddProductModal({
                       $selected={imageUrl === src}
                       onClick={() => setImageUrl(src)}
                       aria-label="Select product photo"
+                      aria-pressed={imageUrl === src}
                     >
-                      <img src={src} alt="" loading="lazy" referrerPolicy="no-referrer" />
+                      <img
+                        src={src}
+                        alt=""
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          (e.currentTarget.parentElement as HTMLElement | null)?.style.setProperty(
+                            'display',
+                            'none'
+                          );
+                        }}
+                      />
                     </CandidateBtn>
                   ))}
                 </CandidateGrid>
@@ -751,6 +771,36 @@ export function AddProductModal({
               </Footer>
               {hint && (
                 <p style={{ color: wl.secondary, font: wl.font.bodySm, marginTop: wl.space(1) }}>{hint}</p>
+              )}
+              {imageCandidates.length > 0 && (
+                <CandidateWrap style={{ marginTop: wl.space(2) }}>
+                  <CandidateLabel>Tap to select photo ({imageCandidates.length})</CandidateLabel>
+                  <CandidateGrid>
+                    {imageCandidates.map((src) => (
+                      <CandidateBtn
+                        key={`footer-${src}`}
+                        type="button"
+                        $selected={imageUrl === src}
+                        onClick={() => setImageUrl(src)}
+                        aria-label="Select product photo"
+                        aria-pressed={imageUrl === src}
+                      >
+                        <img
+                          src={src}
+                          alt=""
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            (e.currentTarget.parentElement as HTMLElement | null)?.style.setProperty(
+                              'display',
+                              'none'
+                            );
+                          }}
+                        />
+                      </CandidateBtn>
+                    ))}
+                  </CandidateGrid>
+                </CandidateWrap>
               )}
               {error && (
                 <p style={{ color: wl.danger, font: wl.font.bodySm, marginTop: wl.space(1) }}>{error}</p>
