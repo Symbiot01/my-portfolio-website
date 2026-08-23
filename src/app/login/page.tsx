@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import styled from '@emotion/styled';
 import Navbar from '@/sections/home/Navbar';
@@ -51,13 +52,21 @@ const Toggle = styled.button`
   border: 1px solid ${({ theme }) => theme.border} !important;
 `;
 
-export default function LoginPage() {
+function safeNextPath(raw: string | null): string | null {
+  if (!raw) return null;
+  if (!raw.startsWith('/') || raw.startsWith('//')) return null;
+  return raw;
+}
+
+function LoginForm() {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const { login } = useAuth();
+  const searchParams = useSearchParams();
+  const nextPath = safeNextPath(searchParams?.get('next') ?? null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,57 +74,70 @@ export default function LoginPage() {
     if (mode === 'register') {
       try {
         await api.register(email, password, username);
-        const ok = await login(email, password);
+        const ok = await login(email, password, nextPath);
         if (!ok) setMessage('Registered but login failed.');
       } catch (err) {
         setMessage(err instanceof Error ? err.message : 'Registration failed');
       }
       return;
     }
-    const success = await login(email, password);
+    const success = await login(email, password, nextPath);
     if (!success) setMessage('Login failed. Check credentials or register.');
   };
 
   return (
+    <Form onSubmit={handleSubmit}>
+      <h2 style={{ textAlign: 'center', margin: 0 }}>
+        {mode === 'login' ? 'Sign In' : 'Create account'}
+      </h2>
+      {nextPath?.startsWith('/wishlist/') && (
+        <p style={{ margin: 0, fontSize: '0.9rem', opacity: 0.8, textAlign: 'center' }}>
+          Sign in to claim your wishlist member slot.
+        </p>
+      )}
+      {mode === 'register' && (
+        <input
+          type="text"
+          placeholder="Username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          required
+        />
+      )}
+      <input
+        type="email"
+        placeholder="Email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        required
+      />
+      <input
+        type="password"
+        placeholder="Password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        required
+      />
+      <button type="submit">{mode === 'login' ? 'Login' : 'Register'}</button>
+      <Toggle
+        type="button"
+        onClick={() => setMode((m) => (m === 'login' ? 'register' : 'login'))}
+      >
+        {mode === 'login' ? 'Need an account? Register' : 'Have an account? Login'}
+      </Toggle>
+      {message && <p style={{ color: '#c0392b', margin: 0 }}>{message}</p>}
+    </Form>
+  );
+}
+
+export default function LoginPage() {
+  return (
     <>
       <Navbar />
       <LoginContainer>
-        <Form onSubmit={handleSubmit}>
-          <h2 style={{ textAlign: 'center', margin: 0 }}>
-            {mode === 'login' ? 'Sign In' : 'Create account'}
-          </h2>
-          {mode === 'register' && (
-            <input
-              type="text"
-              placeholder="Username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-            />
-          )}
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          <button type="submit">{mode === 'login' ? 'Login' : 'Register'}</button>
-          <Toggle
-            type="button"
-            onClick={() => setMode((m) => (m === 'login' ? 'register' : 'login'))}
-          >
-            {mode === 'login' ? 'Need an account? Register' : 'Have an account? Login'}
-          </Toggle>
-          {message && <p style={{ color: '#c0392b', margin: 0 }}>{message}</p>}
-        </Form>
+        <Suspense fallback={<p>Loading…</p>}>
+          <LoginForm />
+        </Suspense>
       </LoginContainer>
     </>
   );

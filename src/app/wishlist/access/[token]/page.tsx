@@ -92,6 +92,9 @@ export default function WishlistAccessPage() {
             <WlPrimaryButton type="button" onClick={openGroup}>
               Open combined view
             </WlPrimaryButton>
+            <Body style={{ marginTop: wl.space(2), marginBottom: 0 }}>
+              After opening, sign in to claim a pending name or join as yourself.
+            </Body>
           </>
         )}
         {!group && !error && <Body>Loading invite…</Body>}

@@ -8,7 +8,7 @@ import { User } from '../types';
 
 type AuthContextType = {
   user: User | null;
-  login: (email: string, pass: string) => Promise<boolean>;
+  login: (email: string, pass: string, redirectTo?: string | null) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
 };
@@ -34,12 +34,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkUser();
   }, []);
 
-  const login = async (email: string, pass: string): Promise<boolean> => {
+  const login = async (
+    email: string,
+    pass: string,
+    redirectTo?: string | null
+  ): Promise<boolean> => {
     try {
       await api.login(email, pass);
       const currentUser = await api.getMe();
       setUser(currentUser);
-      router.push('/');
+      const next =
+        redirectTo && redirectTo.startsWith('/') && !redirectTo.startsWith('//')
+          ? redirectTo
+          : '/';
+      router.push(next);
       return true;
     } catch (error) {
       console.error(error);

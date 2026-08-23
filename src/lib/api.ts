@@ -637,7 +637,12 @@ export const api = {
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({ member_id: memberId ?? null }),
     });
-    if (!res.ok) throw new Error('Failed to link self');
+    if (!res.ok) {
+      const detail = await res.json().catch(() => null);
+      const msg =
+        typeof detail?.detail === 'string' ? detail.detail : 'Failed to link self';
+      throw new Error(msg);
+    }
     return res.json();
   },
 

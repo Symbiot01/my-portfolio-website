@@ -22,6 +22,7 @@ import {
 } from '@/components/wishlist/WishlistProductCard';
 import { AddProductModal } from '@/components/wishlist/AddProductModal';
 import { GroupSettingsPanel } from '@/components/wishlist/GroupSettingsPanel';
+import { WishlistJoinPanel } from '@/components/wishlist/WishlistJoinPanel';
 import { WlPrimaryButton } from '@/components/wishlist/WlButtons';
 
 const Header = styled.header`
@@ -329,6 +330,46 @@ export default function WishlistGroupPage() {
     }
   };
 
+  const loginReturnPath = () => {
+    const token =
+      accessToken ||
+      (typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search).get('access_token')
+        : null);
+    const qs = token ? `?access_token=${encodeURIComponent(token)}` : '';
+    return `/wishlist/${groupId}${qs}`;
+  };
+
+  const onClaimSlot = async (memberId: string) => {
+    if (!user) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const updated = await api.linkSelfWishlistMember(groupId, memberId);
+      setGroup(updated);
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not claim that member slot');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onJoinAsSelf = async () => {
+    if (!user) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const updated = await api.linkSelfWishlistMember(groupId);
+      setGroup(updated);
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not join this wishlist');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (!group && !error) {
     return (
       <WishlistAppShell groupId={groupId}>
@@ -364,6 +405,20 @@ export default function WishlistGroupPage() {
         />
       ) : (
         <>
+          {group && !isLinked && (
+            <WishlistJoinPanel
+              members={group.members}
+              username={user?.username}
+              isLoggedIn={!!user}
+              busy={busy}
+              onSignIn={() =>
+                router.push(`/login?next=${encodeURIComponent(loginReturnPath())}`)
+              }
+              onClaimSlot={onClaimSlot}
+              onJoinAsSelf={onJoinAsSelf}
+            />
+          )}
+
           <Toolbar>
             <Sub style={{ margin: 0 }}>
               {showMineOnly ? 'Your personal list' : 'Combined registry'}
