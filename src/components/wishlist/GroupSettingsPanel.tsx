@@ -60,9 +60,9 @@ const Grid = styled.div`
 
 const Card = styled.section<{ $tone?: 'default' | 'spoiler' | 'danger' }>`
   background: ${({ $tone }) =>
-    $tone === 'spoiler' ? wl.primarySoft : $tone === 'danger' ? '#FFF5F5' : wl.surface};
+    $tone === 'spoiler' ? wl.primarySoft : $tone === 'danger' ? wl.dangerSoft : wl.surface};
   border: 1px solid
-    ${({ $tone }) => ($tone === 'danger' ? '#F5C6CB' : $tone === 'spoiler' ? '#E9D5FF' : wl.border)};
+    ${({ $tone }) => ($tone === 'danger' ? wl.danger : $tone === 'spoiler' ? wl.primary : wl.border)};
   border-radius: ${wl.radiusLg}px;
   padding: ${wl.space(2.5)};
   box-shadow: ${wl.shadow};

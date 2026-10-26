@@ -57,6 +57,8 @@ const StatusOverlay = styled.div`
   z-index: 2;
   color: #fff;
   text-align: center;
+  background: rgba(7, 10, 20, 0.45);
+  backdrop-filter: blur(8px);
 `;
 
 const StatusIcon = styled.div<{ $tone: 'reserved' | 'bought' }>`
@@ -101,8 +103,11 @@ const Title = styled.h3`
 
 const Price = styled.p`
   margin: 0;
-  font: ${wl.font.bodySm};
-  color: ${wl.inkMuted};
+  font-family: var(--font-mono), monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: ${wl.primaryDeep};
 `;
 
 const Divider = styled.hr`
@@ -227,7 +232,7 @@ export function WishlistProductCard({
                       rel="noreferrer"
                       style={{ color: 'inherit', textDecoration: 'none' }}
                     >
-                      {o.title}
+                      {o.title} ↗
                     </a>
                   ) : (
                     o.title

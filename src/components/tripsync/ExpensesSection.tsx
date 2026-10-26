@@ -96,9 +96,10 @@ const KpiLabel = styled.span`
 `;
 
 const KpiValue = styled.div`
+  font-family: var(--font-mono), monospace;
   font-size: 1.35rem;
-  font-weight: 800;
-  color: ${({ theme }) => theme.text};
+  font-weight: 700;
+  color: ${({ theme }) => theme.headingText};
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -544,9 +545,10 @@ const ExpenseRightCol = styled.div`
 `;
 
 const AmountText = styled.span`
-  font-size: 1.15rem;
-  font-weight: 800;
-  color: ${({ theme }) => theme.text};
+  font-family: var(--font-mono), monospace;
+  font-size: 1.08rem;
+  font-weight: 700;
+  color: ${({ theme }) => theme.headingText};
   font-variant-numeric: tabular-nums;
 `;
 
@@ -620,10 +622,11 @@ const AvatarBadge = styled.span`
 `;
 
 const NetPill = styled.span<{ status: 'owed' | 'owes' | 'settled' }>`
-  padding: 0.18rem 0.55rem;
+  font-family: var(--font-mono), monospace;
+  padding: 0.2rem 0.6rem;
   border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 800;
+  font-size: 0.74rem;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   background: ${({ status }) =>
     status === 'owed'
@@ -2165,6 +2168,30 @@ export default function ExpensesSection({
 
             {settlementTab === 'suggested' && (
               <>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '0.5rem',
+                    padding: '0.55rem 0.75rem',
+                    borderRadius: '9px',
+                    background: 'var(--obs-primary-soft)',
+                    border: '1px solid var(--obs-border-strong)',
+                    fontSize: '0.78rem',
+                    fontFamily: 'var(--font-mono), monospace',
+                  }}
+                >
+                  <span>
+                    ✓ Debt Simplification Active: Minimized across {members.length} members
+                  </span>
+                  <strong>
+                    {optimizedSettlements.length} optimal transfer
+                    {optimizedSettlements.length === 1 ? '' : 's'}
+                  </strong>
+                </div>
+
                 {optimizedSettlements.length === 0 ? (
                   <EmptyBox>
                     <div style={{ fontSize: '1.8rem', marginBottom: '0.35rem' }}>🎉</div>

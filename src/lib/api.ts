@@ -220,7 +220,16 @@ export const api = {
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify(postData),
     });
-    if (!res.ok) throw new Error('Failed to create post');
+    if (!res.ok) await throwApiError(res, 'Failed to create post');
+    return res.json();
+  },
+
+  likePost: async (postId: string): Promise<BlogPost> => {
+    const res = await fetch(apiUrl(`/api/blog/posts/${encodeURIComponent(postId)}/like`), {
+      method: 'POST',
+      headers: { ...getAuthHeaders() },
+    });
+    if (!res.ok) await throwApiError(res, 'Sign in to like this post');
     return res.json();
   },
 
@@ -901,3 +910,5 @@ export const api = {
 
   // We will add getProjects, getSkills, etc. here in the future.
 };
+
+export const fetchPublishedPosts = (skip = 0, limit = 10) => api.getBlogPosts(skip, limit);

@@ -210,6 +210,7 @@ const ItemCard = styled.div`
 `;
 
 const TimeCol = styled.div`
+  font-family: var(--font-mono), monospace;
   font-variant-numeric: tabular-nums;
   color: ${({ theme }) => theme.primary};
   font-size: 0.82rem;
