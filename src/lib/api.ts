@@ -300,6 +300,22 @@ export const api = {
     return res.json();
   },
 
+  removeMember: async (
+    tripId: string,
+    memberId: string,
+    opts?: TripSyncRequestOptions
+  ): Promise<TripRead> => {
+    const res = await fetch(
+      apiUrl(`/api/tripsync/${tripId}/members/${encodeURIComponent(memberId)}`),
+      {
+        method: 'DELETE',
+        headers: getTripSyncHeaders(opts),
+      }
+    );
+    if (!res.ok) await throwApiError(res, 'Failed to remove member');
+    return res.json();
+  },
+
   // Itinerary
   listItinerary: async (tripId: string, opts?: TripSyncRequestOptions): Promise<ItineraryItemRead[]> => {
     const res = await fetch(apiUrl(`/api/tripsync/${tripId}/itinerary`), {

@@ -29,7 +29,7 @@ const Title = styled.h2`
   -webkit-background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
-  border-bottom: 2px solid #ccc;
+  border-bottom: 1px solid ${({ theme }) => theme.border};
   padding-bottom: 0.5rem;
 `;
 
@@ -40,13 +40,14 @@ const Grid = styled.div`
 `;
 
 const BlogCard = styled(motion.div)`
-  background: none;
-  border: 1px solid #ccc;
+  background: ${({ theme }) => theme.cardBg};
+  border: 1px solid ${({ theme }) => theme.border};
   border-radius: 12px;
-  padding: 1rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  padding: 1.25rem;
+  box-shadow: 0 4px 12px ${({ theme }) => theme.shadow};
   position: relative;
   overflow: hidden;
+  color: ${({ theme }) => theme.text};
 `;
 
 const Avatar = styled.img`
@@ -66,9 +67,11 @@ const BadgeRow = styled.div`
 `;
 
 const Badge = styled.span`
-  background: #eee;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
+  background: ${({ theme }) => theme.toggleBg};
+  color: ${({ theme }) => theme.mutedText};
+  border: 1px solid ${({ theme }) => theme.border};
+  padding: 0.22rem 0.55rem;
+  border-radius: 6px;
 `;
 
 const posts = [

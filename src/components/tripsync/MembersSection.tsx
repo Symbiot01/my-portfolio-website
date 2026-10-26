@@ -1,9 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import styled from '@emotion/styled';
 import { api } from '@/lib/api';
-import { TripRead, TripMemberInfo, BalanceEntry } from '@/types';
+import {
+  TripRead,
+  TripMemberInfo,
+  BalanceEntry,
+  ExpenseRead,
+  SettlementRead,
+} from '@/types';
 import { formatCurrency } from '@/lib/expenseUtils';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -122,6 +128,8 @@ interface MembersSectionProps {
   tripId: string;
   members: TripMemberInfo[];
   balances?: BalanceEntry[];
+  expenses?: ExpenseRead[];
+  settlements?: SettlementRead[];
   onUpdate: (updatedTrip: TripRead) => void;
   tripAccessToken?: string;
   canEdit?: boolean;
@@ -131,6 +139,8 @@ export default function MembersSection({
   tripId,
   members,
   balances = [],
+  expenses = [],
+  settlements = [],
   onUpdate,
   tripAccessToken,
   canEdit = true,
@@ -138,11 +148,33 @@ export default function MembersSection({
   const [displayName, setDisplayName] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [linkingId, setLinkingId] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
   const [status, setStatus] = useState<{ text: string; tone: 'success' | 'error' } | null>(
     null
   );
 
   const balanceMap = new Map(balances.map((b) => [b.member_id, b.balance]));
+
+  const referencedMemberIds = useMemo(() => {
+    const refs = new Set<string>();
+    expenses.forEach((e) => {
+      if (e.paid_by_member_id) refs.add(e.paid_by_member_id);
+      (e.split_with_member_ids || []).forEach((mid) => {
+        if (mid) refs.add(mid);
+      });
+      (e.custom_splits || []).forEach((cs) => {
+        if (cs?.member_id) refs.add(cs.member_id);
+      });
+    });
+    settlements.forEach((s) => {
+      if (s.payer_member_id) refs.add(s.payer_member_id);
+      if (s.payee_member_id) refs.add(s.payee_member_id);
+    });
+    balances.forEach((b) => {
+      if (Math.abs(b.balance) > 0.009) refs.add(b.member_id);
+    });
+    return refs;
+  }, [expenses, settlements, balances]);
 
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -222,6 +254,57 @@ export default function MembersSection({
       });
     } finally {
       setLinkingId(null);
+    }
+  };
+
+  const handleRemoveMember = async (member: TripMemberInfo) => {
+    if (referencedMemberIds.has(member.member_id)) {
+      setStatus({
+        text: `Cannot remove ${member.display_name} because they are referenced in expenses or settlements.`,
+        tone: 'error',
+      });
+      return;
+    }
+    if (members.length <= 1) {
+      setStatus({
+        text: 'Cannot remove the last remaining member of a trip.',
+        tone: 'error',
+      });
+      return;
+    }
+    setRemovingId(member.member_id);
+    setStatus(null);
+    if (tripId === 'demo') {
+      onUpdate({
+        id: tripId,
+        name: 'Demo Trip',
+        members: members.filter((m) => m.member_id !== member.member_id),
+      });
+      setStatus({
+        text: `Removed ${member.display_name} from the trip.`,
+        tone: 'success',
+      });
+      setRemovingId(null);
+      return;
+    }
+    try {
+      const updatedTrip = await api.removeMember(
+        tripId,
+        member.member_id,
+        tripAccessToken ? { tripAccessToken, tripEdit: canEdit } : undefined
+      );
+      onUpdate(updatedTrip);
+      setStatus({
+        text: `Removed ${member.display_name} from the trip.`,
+        tone: 'success',
+      });
+    } catch (error) {
+      setStatus({
+        text: error instanceof Error ? error.message : 'Failed to remove member.',
+        tone: 'error',
+      });
+    } finally {
+      setRemovingId(null);
     }
   };
 
@@ -314,17 +397,37 @@ export default function MembersSection({
                   </div>
                 </div>
 
-                {!tripAccessToken && !member.linked && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    disabled={linkingId === member.member_id}
-                    onClick={() => void handleLinkSelf(member.member_id)}
-                    style={{ padding: '0.4rem 0.65rem', fontSize: '0.78rem' }}
-                  >
-                    {linkingId === member.member_id ? 'Linking…' : 'Claim Slot'}
-                  </Button>
-                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  {!tripAccessToken && !member.linked && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      disabled={linkingId === member.member_id}
+                      onClick={() => void handleLinkSelf(member.member_id)}
+                      style={{ padding: '0.4rem 0.65rem', fontSize: '0.78rem' }}
+                    >
+                      {linkingId === member.member_id ? 'Linking…' : 'Claim Slot'}
+                    </Button>
+                  )}
+                  {canEdit &&
+                    members.length > 1 &&
+                    !referencedMemberIds.has(member.member_id) && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        disabled={removingId === member.member_id}
+                        onClick={() => void handleRemoveMember(member)}
+                        title="Remove unreferenced traveler"
+                        style={{
+                          padding: '0.4rem 0.6rem',
+                          fontSize: '0.76rem',
+                          color: '#EF4444',
+                        }}
+                      >
+                        {removingId === member.member_id ? '…' : 'Remove'}
+                      </Button>
+                    )}
+                </div>
               </MemberCard>
             );
           })}

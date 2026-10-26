@@ -69,10 +69,12 @@ const Stack = styled.div`
   justify-content: flex-end;
 
   span {
-    background: ${({ theme }) => theme.accent};
-    color: #fff;
-    font-size: 0.9rem;
-    padding: 0.3rem 0.7rem;
+    background: ${({ theme }) => theme.toggleBg};
+    border: 1px solid ${({ theme }) => theme.border};
+    color: ${({ theme }) => theme.text};
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding: 0.3rem 0.75rem;
     border-radius: 999px;
 
     @media (min-width: 2000px) {

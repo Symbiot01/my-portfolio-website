@@ -842,7 +842,8 @@ export default function ExpensesSection({
 
   const getMemberName = useCallback(
     (memberId: string) =>
-      members.find((m) => m.member_id === memberId)?.display_name || 'Unknown',
+      members.find((m) => m.member_id === memberId)?.display_name ||
+      'Former Member',
     [members]
   );
 

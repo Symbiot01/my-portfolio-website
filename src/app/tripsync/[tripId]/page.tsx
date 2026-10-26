@@ -454,11 +454,14 @@ function computeDemoBalances(
     if (!payer || !Number.isFinite(amount)) continue;
     net.set(payer, (net.get(payer) ?? 0) + amount);
     if (exp.custom_splits && exp.custom_splits.length > 0) {
+      const seen = new Set<string>();
       for (const cs of exp.custom_splits) {
+        if (!cs.member_id || seen.has(cs.member_id)) continue;
+        seen.add(cs.member_id);
         net.set(cs.member_id, (net.get(cs.member_id) ?? 0) - Number(cs.amount || 0));
       }
     } else {
-      const ids = exp.split_with_member_ids ?? [];
+      const ids = Array.from(new Set((exp.split_with_member_ids ?? []).filter(Boolean)));
       const splitCount = ids.length || 1;
       const share = amount / splitCount;
       for (const mid of ids) {
@@ -472,11 +475,19 @@ function computeDemoBalances(
     net.set(s.payee_member_id, (net.get(s.payee_member_id) ?? 0) - s.amount);
   }
 
-  return members.map((m) => ({
-    member_id: m.member_id,
-    display_name: m.display_name,
-    balance: Math.round((net.get(m.member_id) ?? 0) * 100) / 100,
-  }));
+  const memberNameMap = new Map(members.map((m) => [m.member_id, m.display_name]));
+  const entries: BalanceEntry[] = [];
+  for (const [memberId, rawBal] of net.entries()) {
+    const balance = Math.round(rawBal * 100) / 100;
+    if (memberNameMap.has(memberId) || Math.abs(balance) > 0) {
+      entries.push({
+        member_id: memberId,
+        display_name: memberNameMap.get(memberId) || 'Former Member',
+        balance,
+      });
+    }
+  }
+  return entries;
 }
 
 function frontendShareUrl(secret?: string | null): string {
@@ -494,19 +505,36 @@ export default function TripDetailPage() {
   const tripId = String(params?.tripId ?? '');
   const isDemo = tripId === 'demo';
 
+  const VALID_SECTIONS: Section[] = [
+    'overview',
+    'expenses',
+    'settlements',
+    'itinerary',
+    'details',
+    'members',
+    'share',
+  ];
+
   const initialTab = (searchParams?.get('tab') as Section) || 'overview';
   const [activeSection, setActiveSection] = useState<Section>(
-    [
-      'overview',
-      'expenses',
-      'settlements',
-      'itinerary',
-      'details',
-      'members',
-      'share',
-    ].includes(initialTab)
-      ? initialTab
-      : 'overview'
+    VALID_SECTIONS.includes(initialTab) ? initialTab : 'overview'
+  );
+
+  const handleSelectSection = useCallback(
+    (nextSection: Section) => {
+      setActiveSection(nextSection);
+      const nextParams = new URLSearchParams(searchParams?.toString() ?? '');
+      if (nextSection === 'overview') {
+        nextParams.delete('tab');
+      } else {
+        nextParams.set('tab', nextSection);
+      }
+      const qs = nextParams.toString();
+      router.replace(qs ? `/tripsync/${tripId}?${qs}` : `/tripsync/${tripId}`, {
+        scroll: false,
+      });
+    },
+    [router, searchParams, tripId]
   );
 
   const [trip, setTrip] = useState<TripRead | null>(null);
@@ -544,6 +572,8 @@ export default function TripDetailPage() {
       ].includes(tabParam)
     ) {
       setActiveSection(tabParam);
+    } else if (!tabParam) {
+      setActiveSection('overview');
     }
   }, [searchParams]);
 
@@ -594,7 +624,9 @@ export default function TripDetailPage() {
           ...entry,
           display_name:
             tripData.members.find((m) => m.member_id === entry.member_id)
-              ?.display_name || entry.display_name,
+              ?.display_name ||
+            entry.display_name ||
+            'Former Member',
         }))
       );
       setItinerary(itineraryData);
@@ -818,19 +850,19 @@ export default function TripDetailPage() {
               <ActionBtn
                 type="button"
                 variant="primary"
-                onClick={() => setActiveSection('expenses')}
+                onClick={() => handleSelectSection('expenses')}
               >
                 + Add Expense
               </ActionBtn>
               <ActionBtn
                 type="button"
-                onClick={() => setActiveSection('settlements')}
+                onClick={() => handleSelectSection('settlements')}
               >
                 🤝 Settle Up
               </ActionBtn>
               <ActionBtn
                 type="button"
-                onClick={() => setActiveSection('itinerary')}
+                onClick={() => handleSelectSection('itinerary')}
               >
                 + Activity
               </ActionBtn>
@@ -851,14 +883,14 @@ export default function TripDetailPage() {
             <TabButton
               type="button"
               active={activeSection === 'overview'}
-              onClick={() => setActiveSection('overview')}
+              onClick={() => handleSelectSection('overview')}
             >
               📊 Overview
             </TabButton>
             <TabButton
               type="button"
               active={activeSection === 'expenses'}
-              onClick={() => setActiveSection('expenses')}
+              onClick={() => handleSelectSection('expenses')}
             >
               💸 Expenses
               <TabCount active={activeSection === 'expenses'}>
@@ -868,7 +900,7 @@ export default function TripDetailPage() {
             <TabButton
               type="button"
               active={activeSection === 'settlements'}
-              onClick={() => setActiveSection('settlements')}
+              onClick={() => handleSelectSection('settlements')}
             >
               🤝 Settlements
               <TabCount active={activeSection === 'settlements'}>
@@ -878,7 +910,7 @@ export default function TripDetailPage() {
             <TabButton
               type="button"
               active={activeSection === 'itinerary'}
-              onClick={() => setActiveSection('itinerary')}
+              onClick={() => handleSelectSection('itinerary')}
             >
               🗓️ Itinerary
               <TabCount active={activeSection === 'itinerary'}>
@@ -888,14 +920,14 @@ export default function TripDetailPage() {
             <TabButton
               type="button"
               active={activeSection === 'details'}
-              onClick={() => setActiveSection('details')}
+              onClick={() => handleSelectSection('details')}
             >
               🗺️ Brief & Stays
             </TabButton>
             <TabButton
               type="button"
               active={activeSection === 'members'}
-              onClick={() => setActiveSection('members')}
+              onClick={() => handleSelectSection('members')}
             >
               👥 Travelers
               <TabCount active={activeSection === 'members'}>
@@ -905,7 +937,7 @@ export default function TripDetailPage() {
             <TabButton
               type="button"
               active={activeSection === 'share'}
-              onClick={() => setActiveSection('share')}
+              onClick={() => handleSelectSection('share')}
             >
               🔗 Share & Access
             </TabButton>
@@ -916,7 +948,7 @@ export default function TripDetailPage() {
         {activeSection === 'overview' && (
           <>
             <KpiStrip>
-              <KpiBox onClick={() => setActiveSection('expenses')}>
+              <KpiBox onClick={() => handleSelectSection('expenses')}>
                 <KpiLabel>Total Trip Spend</KpiLabel>
                 <KpiValue>{formatCurrency(analytics.totalAmount)}</KpiValue>
                 <KpiSub>
@@ -925,7 +957,7 @@ export default function TripDetailPage() {
                 </KpiSub>
               </KpiBox>
 
-              <KpiBox onClick={() => setActiveSection('settlements')}>
+              <KpiBox onClick={() => handleSelectSection('settlements')}>
                 <KpiLabel>Settlement Status</KpiLabel>
                 <KpiValue
                   style={{
@@ -943,7 +975,7 @@ export default function TripDetailPage() {
                 </KpiSub>
               </KpiBox>
 
-              <KpiBox onClick={() => setActiveSection('itinerary')}>
+              <KpiBox onClick={() => handleSelectSection('itinerary')}>
                 <KpiLabel>Itinerary Schedule</KpiLabel>
                 <KpiValue>{itinerary.length} Items</KpiValue>
                 <KpiSub>
@@ -953,7 +985,7 @@ export default function TripDetailPage() {
                 </KpiSub>
               </KpiBox>
 
-              <KpiBox onClick={() => setActiveSection('members')}>
+              <KpiBox onClick={() => handleSelectSection('members')}>
                 <KpiLabel>Travelers</KpiLabel>
                 <KpiValue>{trip.members.length} Members</KpiValue>
                 <KpiSub>
@@ -971,7 +1003,7 @@ export default function TripDetailPage() {
                     <ActionBtn
                       type="button"
                       variant="primary"
-                      onClick={() => setActiveSection('expenses')}
+                      onClick={() => handleSelectSection('expenses')}
                     >
                       Open Expense Manager →
                     </ActionBtn>
@@ -993,7 +1025,8 @@ export default function TripDetailPage() {
                             <div style={{ fontSize: '0.76rem', opacity: 0.75 }}>
                               Paid by{' '}
                               <strong>
-                                {memberNameMap.get(e.paid_by_member_id || '') || 'Unknown'}
+                                {memberNameMap.get(e.paid_by_member_id || '') ||
+                                  'Former Member'}
                               </strong>{' '}
                               • Split {(e.split_with_member_ids ?? []).length} ways
                             </div>
@@ -1012,7 +1045,7 @@ export default function TripDetailPage() {
                     <PanelTitle>🗓️ Upcoming Itinerary</PanelTitle>
                     <ActionBtn
                       type="button"
-                      onClick={() => setActiveSection('itinerary')}
+                      onClick={() => handleSelectSection('itinerary')}
                     >
                       Manage Schedule →
                     </ActionBtn>
@@ -1049,7 +1082,7 @@ export default function TripDetailPage() {
                     <ActionBtn
                       type="button"
                       variant="primary"
-                      onClick={() => setActiveSection('settlements')}
+                      onClick={() => handleSelectSection('settlements')}
                     >
                       Settle Balances →
                     </ActionBtn>
@@ -1084,7 +1117,7 @@ export default function TripDetailPage() {
                           <ActionBtn
                             type="button"
                             variant="primary"
-                            onClick={() => setActiveSection('settlements')}
+                            onClick={() => handleSelectSection('settlements')}
                             style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
                           >
                             Settle
@@ -1100,7 +1133,7 @@ export default function TripDetailPage() {
                     <PanelTitle>⚖️ Traveler Spending & Net Balances</PanelTitle>
                     <ActionBtn
                       type="button"
-                      onClick={() => setActiveSection('members')}
+                      onClick={() => handleSelectSection('members')}
                     >
                       + Add Traveler
                     </ActionBtn>
@@ -1217,6 +1250,8 @@ export default function TripDetailPage() {
             tripId={trip.id}
             members={trip.members}
             balances={balances ?? []}
+            expenses={expenses}
+            settlements={settlements}
             onUpdate={(updatedTrip) => {
               if (isDemo) {
                 setTrip((prev) =>
