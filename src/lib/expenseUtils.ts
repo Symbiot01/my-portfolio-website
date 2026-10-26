@@ -118,7 +118,9 @@ export const getMemberShareForExpense = (
     return found && Number.isFinite(found.amount) ? found.amount : 0;
   }
 
-  const participants = expense.split_with_member_ids || [];
+  const participants = Array.from(
+    new Set((expense.split_with_member_ids || []).filter(Boolean))
+  );
   if (!participants.includes(memberId) || participants.length === 0) return 0;
   return amount / participants.length;
 };
@@ -183,9 +185,19 @@ export const computeExpenseAnalytics = (
   const paidMap = new Map<string, { amount: number; count: number }>();
   const shareMap = new Map<string, number>();
 
+  const normalizedBalances = normalizeBalanceArray(balances);
+  const memberNameLookup = new Map<string, string>();
   members.forEach((m) => {
+    memberNameLookup.set(m.member_id, m.display_name);
     paidMap.set(m.member_id, { amount: 0, count: 0 });
     shareMap.set(m.member_id, 0);
+  });
+  normalizedBalances.forEach((b) => {
+    if (!memberNameLookup.has(b.member_id)) {
+      memberNameLookup.set(b.member_id, b.display_name || 'Former Member');
+      paidMap.set(b.member_id, { amount: 0, count: 0 });
+      shareMap.set(b.member_id, 0);
+    }
   });
 
   for (const exp of expenses) {
@@ -201,6 +213,9 @@ export const computeExpenseAnalytics = (
     });
 
     if (exp.paid_by_member_id) {
+      if (!memberNameLookup.has(exp.paid_by_member_id)) {
+        memberNameLookup.set(exp.paid_by_member_id, 'Former Member');
+      }
       const prevPaid = paidMap.get(exp.paid_by_member_id) || {
         amount: 0,
         count: 0,
@@ -211,10 +226,21 @@ export const computeExpenseAnalytics = (
       });
     }
 
-    for (const m of members) {
-      const share = getMemberShareForExpense(exp, m.member_id);
+    const referencedIds = new Set<string>(memberNameLookup.keys());
+    (exp.split_with_member_ids || []).forEach((id) => {
+      if (id) referencedIds.add(id);
+    });
+    (exp.custom_splits || []).forEach((cs) => {
+      if (cs?.member_id) referencedIds.add(cs.member_id);
+    });
+
+    for (const memberId of referencedIds) {
+      if (!memberNameLookup.has(memberId)) {
+        memberNameLookup.set(memberId, 'Former Member');
+      }
+      const share = getMemberShareForExpense(exp, memberId);
       if (share > 0) {
-        shareMap.set(m.member_id, (shareMap.get(m.member_id) || 0) + share);
+        shareMap.set(memberId, (shareMap.get(memberId) || 0) + share);
       }
     }
   }
@@ -230,21 +256,22 @@ export const computeExpenseAnalytics = (
     }))
     .sort((a, b) => b.amount - a.amount);
 
-  const normalizedBalances = normalizeBalanceArray(balances);
   const balanceLookup = new Map(
     normalizedBalances.map((b) => [b.member_id, b.balance])
   );
 
-  const byMember: MemberExpenseStat[] = members.map((m) => {
-    const paid = paidMap.get(m.member_id) || { amount: 0, count: 0 };
-    const shareTotal = shareMap.get(m.member_id) || 0;
+  const byMember: MemberExpenseStat[] = Array.from(
+    memberNameLookup.entries()
+  ).map(([memberId, displayName]) => {
+    const paid = paidMap.get(memberId) || { amount: 0, count: 0 };
+    const shareTotal = shareMap.get(memberId) || 0;
     const netBalance =
-      balanceLookup.get(m.member_id) ?? paid.amount - shareTotal;
+      balanceLookup.get(memberId) ?? paid.amount - shareTotal;
     return {
-      member_id: m.member_id,
-      memberId: m.member_id,
-      display_name: m.display_name,
-      displayName: m.display_name,
+      member_id: memberId,
+      memberId,
+      display_name: displayName,
+      displayName,
       paidTotal: paid.amount,
       totalPaid: paid.amount,
       shareTotal,
@@ -317,9 +344,9 @@ export const optimizeSettlements = (
     if (settleAmount >= 0.01) {
       settlements.push({
         from: debtor.member_id,
-        fromName: debtor.display_name || debtor.member_id,
+        fromName: debtor.display_name || 'Former Member',
         to: creditor.member_id,
-        toName: creditor.display_name || creditor.member_id,
+        toName: creditor.display_name || 'Former Member',
         amount: parseFloat(settleAmount.toFixed(2)),
       });
     }
@@ -338,15 +365,15 @@ export const calculateOptimalSettlements = optimizeSettlements;
 
 export const getCategoryColor = (category?: string | null): string => {
   const colors: Record<string, string> = {
-    Food: '#F97316',
-    'Food & Drinks': '#F97316',
-    Transport: '#06B6D4',
-    Accommodation: '#6366F1',
-    Lodging: '#6366F1',
-    Activities: '#EC4899',
-    Shopping: '#8B5CF6',
-    Groceries: '#10B981',
-    Other: '#64748B',
+    Food: '#d97757',
+    'Food & Drinks': '#d97757',
+    Transport: '#5b8fa8',
+    Accommodation: '#6e78a8',
+    Lodging: '#6e78a8',
+    Activities: '#b57c9e',
+    Shopping: '#8b7aa8',
+    Groceries: '#5f967c',
+    Other: '#788696',
   };
   return (category && colors[category]) || colors.Other;
 };

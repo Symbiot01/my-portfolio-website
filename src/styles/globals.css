@@ -1,14 +1,21 @@
-:root {
-    --background: #ffffff;
-    --foreground: #171717;
+:root,
+html[data-theme='light'] {
+  --background: #faf8f5;
+  --foreground: #1e293b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --background: #0f141c;
+    --foreground: #e2e8f0;
   }
-  
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --background: #0a0a0a;
-      --foreground: #ededed;
-    }
-  }
+}
+
+html[data-theme='dark'] {
+  --background: #0f141c;
+  --foreground: #e2e8f0;
+  color-scheme: dark;
+}
   
   html,
   body {

@@ -142,8 +142,49 @@ function TripAccessInner() {
   const [tripDoc, setTripDoc] = useState<TripDoc | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<Section>('expenses');
+  const VALID_SECTIONS: Section[] = [
+    'expenses',
+    'settlements',
+    'itinerary',
+    'details',
+    'members',
+  ];
+  const initialTab = (searchParams?.get('tab') as Section) || 'expenses';
+  const [activeSection, setActiveSection] = useState<Section>(
+    VALID_SECTIONS.includes(initialTab) ? initialTab : 'expenses'
+  );
   const [canEdit, setCanEdit] = useState(true);
+
+  useEffect(() => {
+    const tabParam = searchParams?.get('tab') as Section | null;
+    if (
+      tabParam &&
+      ['expenses', 'settlements', 'itinerary', 'details', 'members'].includes(
+        tabParam
+      )
+    ) {
+      setActiveSection(tabParam);
+    } else if (!tabParam) {
+      setActiveSection('expenses');
+    }
+  }, [searchParams]);
+
+  const handleSelectSection = useCallback(
+    (nextSection: Section) => {
+      setActiveSection(nextSection);
+      const nextParams = new URLSearchParams(searchParams?.toString() ?? '');
+      if (nextSection === 'expenses') {
+        nextParams.delete('tab');
+      } else {
+        nextParams.set('tab', nextSection);
+      }
+      const qs = nextParams.toString();
+      router.replace(qs ? `/tripsync/access?${qs}` : '/tripsync/access', {
+        scroll: false,
+      });
+    },
+    [router, searchParams]
+  );
 
   const loadByToken = useCallback(async () => {
     if (!token) {
@@ -172,7 +213,8 @@ function TripAccessInner() {
           ...entry,
           display_name:
             t.members.find((m) => m.member_id === entry.member_id)?.display_name ||
-            entry.display_name,
+            entry.display_name ||
+            'Former Member',
         }))
       );
       setItinerary(it);
@@ -271,35 +313,35 @@ function TripAccessInner() {
             <TabButton
               type="button"
               active={activeSection === 'expenses'}
-              onClick={() => setActiveSection('expenses')}
+              onClick={() => handleSelectSection('expenses')}
             >
               💸 Expenses ({expenses.length})
             </TabButton>
             <TabButton
               type="button"
               active={activeSection === 'settlements'}
-              onClick={() => setActiveSection('settlements')}
+              onClick={() => handleSelectSection('settlements')}
             >
               🤝 Settlements ({pendingSettlements.length})
             </TabButton>
             <TabButton
               type="button"
               active={activeSection === 'itinerary'}
-              onClick={() => setActiveSection('itinerary')}
+              onClick={() => handleSelectSection('itinerary')}
             >
               🗓️ Itinerary ({itinerary.length})
             </TabButton>
             <TabButton
               type="button"
               active={activeSection === 'details'}
-              onClick={() => setActiveSection('details')}
+              onClick={() => handleSelectSection('details')}
             >
               🗺️ Brief & Stays
             </TabButton>
             <TabButton
               type="button"
               active={activeSection === 'members'}
-              onClick={() => setActiveSection('members')}
+              onClick={() => handleSelectSection('members')}
             >
               👥 Travelers ({trip.members.length})
             </TabButton>
@@ -349,6 +391,8 @@ function TripAccessInner() {
             tripId={trip.id}
             members={trip.members}
             balances={balances ?? []}
+            expenses={expenses}
+            settlements={settlements}
             onUpdate={(updatedTrip) => {
               setTrip(updatedTrip);
               void loadByToken();

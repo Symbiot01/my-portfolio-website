@@ -81,13 +81,7 @@ const Title = styled.h1`
 `;
 
 const AnimatedTitle = styled(Title)`
-  animation: pulseText 3s infinite ease-in-out;
-
-  @keyframes pulseText {
-    0% { filter: brightness(1); }
-    50% { filter: brightness(1.3); }
-    100% { filter: brightness(1); }
-  }
+  letter-spacing: -0.02em;
 `;
 
 const Subtitle = styled(motion.p)`

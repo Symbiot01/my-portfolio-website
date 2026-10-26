@@ -18,20 +18,28 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
-    if (stored === 'dark' || stored === 'light') {
-      setIsDarkMode(stored === 'dark');
+    const preconfigured = document.documentElement.dataset.theme;
+    if (preconfigured === 'dark' || preconfigured === 'light') {
+      setIsDarkMode(preconfigured === 'dark');
     } else {
-      setIsDarkMode(window.matchMedia('(prefers-color-scheme: dark)').matches);
+      const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+      if (stored === 'dark' || stored === 'light') {
+        setIsDarkMode(stored === 'dark');
+      } else {
+        setIsDarkMode(window.matchMedia('(prefers-color-scheme: dark)').matches);
+      }
     }
     setHydrated(true);
   }, []);
 
   useEffect(() => {
     if (!hydrated) return;
-    window.localStorage.setItem(THEME_STORAGE_KEY, isDarkMode ? 'dark' : 'light');
-    document.documentElement.dataset.theme = isDarkMode ? 'dark' : 'light';
-    document.documentElement.style.colorScheme = isDarkMode ? 'dark' : 'light';
+    const mode = isDarkMode ? 'dark' : 'light';
+    window.localStorage.setItem(THEME_STORAGE_KEY, mode);
+    document.documentElement.dataset.theme = mode;
+    document.documentElement.style.colorScheme = mode;
+    document.documentElement.style.backgroundColor = isDarkMode ? '#0f141c' : '#faf8f5';
+    document.documentElement.style.color = isDarkMode ? '#e2e8f0' : '#1e293b';
   }, [hydrated, isDarkMode]);
 
   const toggleTheme = () => setIsDarkMode((prev) => !prev);
