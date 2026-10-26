@@ -7,93 +7,122 @@ import { api } from '@/lib/api';
 import TripAiEditPanel from '@/components/tripsync/TripAiEditPanel';
 
 const Wrapper = styled.div`
-  max-width: 1100px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 `;
 
-const HeaderRow = styled.div`
+const TopBar = styled.div`
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  margin-bottom: 0.75rem;
-`;
-
-const Title = styled.h2`
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 900;
-  color: ${({ theme }) => theme.text};
-`;
-
-const Subtle = styled.div`
-  color: ${({ theme }) => theme.mutedText};
-  font-size: 0.9rem;
-`;
-
-const Toolbar = styled.div`
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
   flex-wrap: wrap;
+`;
+
+const FilterStrip = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  background: ${({ theme }) => theme.cardBg};
+  border: 1px solid ${({ theme }) => theme.border};
+  border-radius: 12px;
+  padding: 0.65rem 0.85rem;
+`;
+
+const PillRow = styled.div`
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  align-items: center;
+`;
+
+const FilterPill = styled.button<{ active: boolean }>`
+  padding: 0.3rem 0.68rem;
+  border-radius: 999px;
+  border: 1px solid ${({ active, theme }) => (active ? theme.primary : theme.border)};
+  background: ${({ active, theme }) =>
+    active ? `${theme.primary}20` : theme.background};
+  color: ${({ active, theme }) => (active ? theme.primary : theme.text)};
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    border-color: ${({ theme }) => theme.primary};
+  }
 `;
 
 const Button = styled.button<{ variant?: 'primary' | 'ghost' | 'danger' }>`
   border: 1px solid
     ${({ theme, variant }) =>
-      variant === 'primary' ? theme.primary : variant === 'danger' ? '#E74C3C' : theme.border};
+      variant === 'primary'
+        ? theme.primary
+        : variant === 'danger'
+        ? '#EF444466'
+        : theme.border};
   background: ${({ theme, variant }) =>
-    variant === 'primary' ? theme.primary : variant === 'danger' ? '#E74C3C' : 'transparent'};
-  color: ${({ variant, theme }) => (variant === 'primary' || variant === 'danger' ? '#fff' : theme.text)};
-  border-radius: 10px;
-  padding: 0.55rem 0.8rem;
-  font-weight: 900;
+    variant === 'primary'
+      ? theme.primary
+      : variant === 'danger'
+      ? '#EF444415'
+      : 'transparent'};
+  color: ${({ variant, theme }) =>
+    variant === 'primary'
+      ? '#fff'
+      : variant === 'danger'
+      ? '#EF4444'
+      : theme.text};
+  border-radius: 9px;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 800;
   cursor: pointer;
+  white-space: nowrap;
 
   &:disabled {
-    opacity: 0.55;
+    opacity: 0.5;
     cursor: not-allowed;
   }
 `;
 
 const FormCard = styled.div`
-  border: 1px solid ${({ theme }) => theme.border};
-  background: ${({ theme }) => theme.background};
-  border-radius: 12px;
-  padding: 0.85rem;
-  margin-bottom: 0.75rem;
+  border: 1.5px solid ${({ theme }) => theme.primary}66;
+  background: ${({ theme }) => theme.cardBg};
+  border-radius: 14px;
+  padding: 1rem;
 `;
 
 const Grid = styled.div`
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
-
-  @media (max-width: 680px) {
-    grid-template-columns: 1fr;
-  }
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.65rem;
 `;
 
 const Field = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.28rem;
 `;
 
 const Label = styled.label`
   font-size: 0.72rem;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: ${({ theme }) => theme.mutedText};
-  font-weight: 900;
+  font-weight: 800;
 `;
 
 const Input = styled.input`
   border: 1px solid ${({ theme }) => theme.border};
-  background: ${({ theme }) => theme.cardBg};
+  background: ${({ theme }) => theme.background};
   color: ${({ theme }) => theme.text};
-  border-radius: 10px;
-  padding: 0.65rem 0.75rem;
-  font-size: 0.95rem;
+  border-radius: 9px;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.88rem;
 
   &:focus {
     outline: none;
@@ -103,11 +132,11 @@ const Input = styled.input`
 
 const Select = styled.select`
   border: 1px solid ${({ theme }) => theme.border};
-  background: ${({ theme }) => theme.cardBg};
+  background: ${({ theme }) => theme.background};
   color: ${({ theme }) => theme.text};
-  border-radius: 10px;
-  padding: 0.65rem 0.75rem;
-  font-size: 0.95rem;
+  border-radius: 9px;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.88rem;
 
   &:focus {
     outline: none;
@@ -117,12 +146,12 @@ const Select = styled.select`
 
 const Textarea = styled.textarea`
   border: 1px solid ${({ theme }) => theme.border};
-  background: ${({ theme }) => theme.cardBg};
+  background: ${({ theme }) => theme.background};
   color: ${({ theme }) => theme.text};
-  border-radius: 10px;
-  padding: 0.65rem 0.75rem;
-  font-size: 0.95rem;
-  min-height: 84px;
+  border-radius: 9px;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.88rem;
+  min-height: 70px;
   resize: vertical;
 
   &:focus {
@@ -131,134 +160,111 @@ const Textarea = styled.textarea`
   }
 `;
 
-const Inline = styled.div`
-  display: flex;
-  gap: 0.6rem;
-  align-items: center;
-  flex-wrap: wrap;
-`;
-
-const CheckboxLabel = styled.label`
-  display: inline-flex;
-  gap: 0.5rem;
-  align-items: center;
-  font-size: 0.92rem;
-  color: ${({ theme }) => theme.text};
-  font-weight: 700;
-`;
-
-const ErrorText = styled.div`
-  color: #E74C3C;
-  font-size: 0.9rem;
-  margin-top: 0.25rem;
+const StatusBanner = styled.div<{ tone: 'error' | 'success' }>`
+  padding: 0.55rem 0.85rem;
+  border-radius: 9px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  background: ${({ tone }) => (tone === 'error' ? '#EF444418' : '#10B98118')};
+  color: ${({ tone }) => (tone === 'error' ? '#EF4444' : '#10B981')};
+  border: 1px solid ${({ tone }) => (tone === 'error' ? '#EF444455' : '#10B98155')};
 `;
 
 const Group = styled.div`
-  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 `;
 
 const GroupTitle = styled.div`
-  font-size: 0.75rem;
+  font-size: 0.76rem;
   font-weight: 900;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: ${({ theme }) => theme.mutedText};
-  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 `;
 
 const Timeline = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.5rem;
 `;
 
 const ItemCard = styled.div`
   border: 1px solid ${({ theme }) => theme.border};
-  background: ${({ theme }) => theme.background};
+  background: ${({ theme }) => theme.cardBg};
   border-radius: 12px;
-  padding: 0.75rem 0.85rem;
+  padding: 0.75rem 0.9rem;
   display: grid;
-  grid-template-columns: 84px 1fr;
+  grid-template-columns: 96px 1fr auto;
   gap: 0.75rem;
+  align-items: center;
 
-  @media (max-width: 520px) {
+  @media (max-width: 640px) {
     grid-template-columns: 1fr;
-    gap: 0.5rem;
+    gap: 0.45rem;
   }
 `;
 
 const TimeCol = styled.div`
   font-variant-numeric: tabular-nums;
-  color: ${({ theme }) => theme.mutedText};
-  font-size: 0.85rem;
-  line-height: 1.25;
+  color: ${({ theme }) => theme.primary};
+  font-size: 0.82rem;
+  font-weight: 800;
 `;
 
 const MainCol = styled.div`
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 `;
 
-const Row = styled.div`
+const ItemTitleRow = styled.div`
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.6rem;
-`;
-
-const ItemTitle = styled.div`
-  font-size: 1rem;
-  font-weight: 900;
-  color: ${({ theme }) => theme.text};
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-`;
-
-const Pills = styled.div`
-  display: flex;
-  gap: 0.35rem;
+  gap: 0.45rem;
   flex-wrap: wrap;
-  justify-content: flex-end;
 `;
 
-const Pill = styled.span<{ tone?: 'primary' | 'neutral' }>`
-  font-size: 0.72rem;
-  font-weight: 900;
-  letter-spacing: 0.04em;
+const ItemTitle = styled.span`
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: ${({ theme }) => theme.text};
+`;
+
+const TypeBadge = styled.span`
+  font-size: 0.7rem;
+  font-weight: 800;
   text-transform: uppercase;
-  padding: 0.18rem 0.45rem;
+  padding: 0.14rem 0.48rem;
   border-radius: 999px;
-  border: 1px solid ${({ theme, tone }) => (tone === 'primary' ? theme.primary : theme.border)};
-  background: ${({ theme, tone }) => (tone === 'primary' ? `${theme.primary}14` : 'transparent')};
-  color: ${({ theme, tone }) => (tone === 'primary' ? theme.primary : theme.mutedText)};
+  border: 1px solid ${({ theme }) => theme.border};
+  background: ${({ theme }) => theme.background};
+  color: ${({ theme }) => theme.mutedText};
 `;
 
-const Meta = styled.div`
-  margin-top: 0.35rem;
+const MetaRow = styled.div`
   display: flex;
-  gap: 0.6rem;
+  gap: 0.65rem;
   flex-wrap: wrap;
   color: ${({ theme }) => theme.mutedText};
-  font-size: 0.85rem;
-`;
-
-const MetaItem = styled.span`
-  display: inline-flex;
-  gap: 0.35rem;
+  font-size: 0.8rem;
   align-items: center;
-  min-width: 0;
 `;
 
-const Notes = styled.div`
-  margin-top: 0.5rem;
-  color: ${({ theme }) => theme.text};
-  opacity: 0.9;
-  font-size: 0.9rem;
-  line-height: 1.45;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+const MapLink = styled.a`
+  color: ${({ theme }) => theme.primary};
+  font-weight: 700;
+  font-size: 0.76rem;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
 `;
 
 function safeDate(d: string | null | undefined): Date | null {
@@ -271,53 +277,54 @@ function toDatetimeLocalValue(iso: string | null | undefined): string {
   const d = safeDate(iso);
   if (!d) return '';
   const pad = (n: number) => String(n).padStart(2, '0');
-  const yyyy = d.getFullYear();
-  const mm = pad(d.getMonth() + 1);
-  const dd = pad(d.getDate());
-  const hh = pad(d.getHours());
-  const mi = pad(d.getMinutes());
-  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+    d.getHours()
+  )}:${pad(d.getMinutes())}`;
 }
 
 function toIsoFromDatetimeLocal(value: string): string | null {
   if (!value) return null;
   const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return null;
-  return d.toISOString();
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
 function toIsoFromDateOnly(value: string): string | null {
   if (!value) return null;
-  // Midnight UTC of the chosen date.
   return `${value}T00:00:00Z`;
 }
 
-function formatTimeRange(start?: string | null, end?: string | null, allDay?: boolean | null): string {
+function formatTimeRange(
+  start?: string | null,
+  end?: string | null,
+  allDay?: boolean | null
+): string {
   if (allDay) return 'All day';
   const s = safeDate(start);
   const e = safeDate(end);
   if (!s) return '—';
-  const fmt = (x: Date) => x.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const fmt = (x: Date) =>
+    x.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   if (!e) return fmt(s);
   return `${fmt(s)}–${fmt(e)}`;
 }
 
 function formatShortDate(d: Date): string {
-  return d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+  return d.toLocaleDateString([], {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
 }
 
 function getDateKey(start?: string | null): string | null {
   if (!start) return null;
-  // Works for ISO strings; falls back to Date parsing.
   const isoPrefix = start.slice(0, 10);
   if (/^\d{4}-\d{2}-\d{2}$/.test(isoPrefix)) return isoPrefix;
   const d = safeDate(start);
   if (!d) return null;
-  // Local date key (stable enough for grouping).
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+    d.getDate()
+  ).padStart(2, '0')}`;
 }
 
 type GroupKey = `day:${number}` | `date:${string}` | 'unscheduled';
@@ -333,16 +340,21 @@ function formatGroupLabel(key: GroupKey, items: ItineraryItemRead[]): string {
   if (key === 'unscheduled') return 'Unscheduled';
   if (key.startsWith('date:')) {
     const d = safeDate(items[0]?.start_time);
-    if (d) return formatShortDate(d);
-    // Fallback to YYYY-MM-DD from key.
-    return key.slice('date:'.length);
+    return d ? formatShortDate(d) : key.slice(5);
   }
-  // day:<n>
-  const dayIndex = Number(key.slice('day:'.length));
+  const dayIndex = Number(key.slice(4));
   const firstWithDate = items.find((x) => !!safeDate(x.start_time));
   const d = safeDate(firstWithDate?.start_time ?? null);
   return d ? `Day ${dayIndex} • ${formatShortDate(d)}` : `Day ${dayIndex}`;
 }
+
+const TYPE_ICONS: Record<string, string> = {
+  activity: '🎯',
+  transport: '🚗',
+  food: '🍽️',
+  lodging: '🏨',
+  other: '📌',
+};
 
 type Props = {
   tripId: string;
@@ -351,7 +363,6 @@ type Props = {
   canEdit?: boolean;
   onItemsChange?: (next: ItineraryItemRead[]) => void;
   onRefresh?: () => Promise<void> | void;
-  /** Optional TripDoc revision for AI apply; if null we can still propose but apply will ask you to load Details. */
   docRevision?: number | null;
 };
 
@@ -369,16 +380,24 @@ export default function ItinerarySection({
   const [title, setTitle] = useState('');
   const [itemType, setItemType] = useState('activity');
   const [allDay, setAllDay] = useState(false);
-  const [startDate, setStartDate] = useState(''); // used when allDay
-  const [startTime, setStartTime] = useState(''); // datetime-local when !allDay
-  const [endTime, setEndTime] = useState(''); // datetime-local
+  const [startDate, setStartDate] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [location, setLocation] = useState('');
   const [notes, setNotes] = useState('');
-  const [dayIndex, setDayIndex] = useState<string>(''); // number text
+  const [dayIndex, setDayIndex] = useState<string>('');
   const [lat, setLat] = useState<string>('');
   const [lng, setLng] = useState<string>('');
   const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  const [status, setStatus] = useState<{ text: string; tone: 'error' | 'success' } | null>(
+    null
+  );
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  // Filters
+  const [selectedGroupFilter, setSelectedGroupFilter] = useState<string>('ALL');
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('ALL');
+  const [showAiPanel, setShowAiPanel] = useState(false);
 
   const opts = useMemo(
     () => (tripAccessToken ? { tripAccessToken, tripEdit: canEdit } : undefined),
@@ -398,11 +417,15 @@ export default function ItinerarySection({
     setDayIndex('');
     setLat('');
     setLng('');
-    setErr(null);
+    setStatus(null);
   };
 
   const openCreate = () => {
     resetForm();
+    const now = new Date();
+    now.setMinutes(0, 0, 0);
+    setStartTime(toDatetimeLocalValue(now.toISOString()));
+    setStartDate(now.toISOString().slice(0, 10));
     setFormOpen(true);
   };
 
@@ -419,17 +442,20 @@ export default function ItinerarySection({
     setDayIndex(it.day_index != null ? String(it.day_index) : '');
     setLat(it.lat != null ? String(it.lat) : '');
     setLng(it.lng != null ? String(it.lng) : '');
-    setErr(null);
+    setStatus(null);
     setFormOpen(true);
   };
 
   const validate = (): { ok: boolean; payload?: ItineraryItemCreate } => {
     const t = title.trim();
-    if (!t) return { ok: false };
+    if (!t) {
+      setStatus({ text: 'Title is required.', tone: 'error' });
+      return { ok: false };
+    }
 
     const parsedDay = dayIndex.trim() ? Number(dayIndex) : null;
     if (parsedDay != null && (!Number.isFinite(parsedDay) || parsedDay < 1)) {
-      setErr('day_index must be >= 1');
+      setStatus({ text: 'Day index must be 1 or greater.', tone: 'error' });
       return { ok: false };
     }
 
@@ -437,11 +463,12 @@ export default function ItinerarySection({
     const lngVal = lng.trim() ? Number(lng) : null;
     const hasLat = latVal != null && !Number.isNaN(latVal);
     const hasLng = lngVal != null && !Number.isNaN(lngVal);
-    if (lat.trim() || lng.trim()) {
-      if (!(hasLat && hasLng)) {
-        setErr('lat and lng must be both present (or both empty).');
-        return { ok: false };
-      }
+    if ((lat.trim() || lng.trim()) && !(hasLat && hasLng)) {
+      setStatus({
+        text: 'Both latitude and longitude must be provided together.',
+        tone: 'error',
+      });
+      return { ok: false };
     }
 
     let startIso: string | null = null;
@@ -449,32 +476,27 @@ export default function ItinerarySection({
     if (allDay) {
       startIso = toIsoFromDateOnly(startDate);
       if (!startIso) {
-        setErr('Start date is required for all-day items.');
+        setStatus({ text: 'Date is required for all-day items.', tone: 'error' });
         return { ok: false };
       }
-      endIso = null;
     } else {
       startIso = toIsoFromDatetimeLocal(startTime);
       if (!startIso) {
-        setErr('Start time is required.');
+        setStatus({ text: 'Start time is required.', tone: 'error' });
         return { ok: false };
       }
       endIso = endTime ? toIsoFromDatetimeLocal(endTime) : null;
-      if (endTime && !endIso) {
-        setErr('End time is invalid.');
-        return { ok: false };
-      }
       if (endIso) {
         const s = safeDate(startIso)?.getTime() ?? 0;
         const e = safeDate(endIso)?.getTime() ?? 0;
         if (e < s) {
-          setErr('End time must be after start time.');
+          setStatus({ text: 'End time must be after start time.', tone: 'error' });
           return { ok: false };
         }
       }
     }
 
-    setErr(null);
+    setStatus(null);
     return {
       ok: true,
       payload: {
@@ -494,7 +516,6 @@ export default function ItinerarySection({
 
   const refreshFromServer = async () => {
     await onRefresh?.();
-    // If parent doesn’t implement onRefresh, fall back to local list.
     if (!onRefresh) {
       try {
         const next = await api.listItinerary(tripId, opts);
@@ -507,7 +528,10 @@ export default function ItinerarySection({
 
   const handleSave = async () => {
     if (tripAccessToken && !canEdit) {
-      alert('Editing is disabled for this share link. Enable editing to change itinerary.');
+      setStatus({
+        text: 'Enable editing on this share link to modify itinerary.',
+        tone: 'error',
+      });
       return;
     }
     const v = validate();
@@ -515,6 +539,20 @@ export default function ItinerarySection({
 
     try {
       setSaving(true);
+      if (tripId === 'demo' && v.payload?.start_time) {
+        const nextItem: ItineraryItemRead = {
+          ...v.payload,
+          id: editingId || `demo-it-${Date.now()}`,
+          start_time: v.payload.start_time,
+        };
+        const next = editingId
+          ? items.map((it) => (it.id === editingId ? nextItem : it))
+          : [...items, nextItem];
+        onItemsChange?.(next);
+        setFormOpen(false);
+        resetForm();
+        return;
+      }
       if (editingId) {
         await api.updateItinerary(tripId, editingId, v.payload, opts);
       } else {
@@ -524,37 +562,45 @@ export default function ItinerarySection({
       setFormOpen(false);
       resetForm();
     } catch (e) {
-      console.error('Failed to save itinerary item:', e);
-      alert('Failed to save itinerary item. Please try again.');
+      setStatus({
+        text: e instanceof Error ? e.message : 'Failed to save itinerary item.',
+        tone: 'error',
+      });
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this itinerary item?')) return;
-    if (tripAccessToken && !canEdit) {
-      alert('Editing is disabled for this share link.');
+    if (tripAccessToken && !canEdit) return;
+    if (tripId === 'demo') {
+      onItemsChange?.(items.filter((it) => it.id !== id));
+      setConfirmDeleteId(null);
       return;
     }
     try {
       await api.deleteItinerary(tripId, id, opts);
+      setConfirmDeleteId(null);
       await refreshFromServer();
     } catch (e) {
-      console.error('Failed to delete itinerary item:', e);
-      alert('Failed to delete itinerary item.');
+      setStatus({
+        text: e instanceof Error ? e.message : 'Failed to delete itinerary item.',
+        tone: 'error',
+      });
     }
   };
 
   const grouped = useMemo(() => {
     const map = new Map<GroupKey, ItineraryItemRead[]>();
     for (const item of items) {
+      if (selectedTypeFilter !== 'ALL' && item.item_type !== selectedTypeFilter) {
+        continue;
+      }
       const key = getGroupKey(item);
       const arr = map.get(key) ?? [];
       arr.push(item);
       map.set(key, arr);
     }
-    // Preserve insertion order but sort within each group by start_time.
     for (const [k, arr] of map.entries()) {
       arr.sort((a, b) => {
         const da = safeDate(a.start_time)?.getTime() ?? 0;
@@ -564,7 +610,6 @@ export default function ItinerarySection({
       map.set(k, arr);
     }
     const entries = Array.from(map.entries());
-    // Sort groups: Day 1, Day 2, ... then date groups, then Unscheduled.
     entries.sort((a, b) => {
       const ka = a[0];
       const kb = b[0];
@@ -578,36 +623,73 @@ export default function ItinerarySection({
       if (isDateA && isDateB) return ka.localeCompare(kb);
       if (isDateA) return -1;
       if (isDateB) return 1;
-      return 1; // unscheduled last
+      return 1;
     });
     return entries;
-  }, [items]);
+  }, [items, selectedTypeFilter]);
+
+  const visibleGroups = useMemo(() => {
+    if (selectedGroupFilter === 'ALL') return grouped;
+    return grouped.filter(([k]) => k === selectedGroupFilter);
+  }, [grouped, selectedGroupFilter]);
 
   return (
     <Wrapper>
-      <HeaderRow>
-        <Title>Itinerary</Title>
-        <Toolbar>
-          <Subtle>{items.length} item{items.length === 1 ? '' : 's'}</Subtle>
+      <TopBar>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <strong style={{ fontSize: '1.05rem' }}>
+            🗓️ Schedule ({items.length} item{items.length === 1 ? '' : 's'})
+          </strong>
+        </div>
+
+        <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => setShowAiPanel((v) => !v)}
+          >
+            {showAiPanel ? 'Hide AI Co-Pilot' : '✨ AI Plan Itinerary'}
+          </Button>
           <Button
             type="button"
             variant="primary"
             onClick={openCreate}
             disabled={tripAccessToken ? !canEdit : false}
-            title={tripAccessToken && !canEdit ? 'Enable editing to add items' : undefined}
           >
-            Add item
+            + Add Activity
           </Button>
-        </Toolbar>
-      </HeaderRow>
+        </div>
+      </TopBar>
+
+      {status && <StatusBanner tone={status.tone}>{status.text}</StatusBanner>}
+
+      {showAiPanel && (
+        <TripAiEditPanel
+          title="✨ AI Itinerary Planner"
+          tripId={tripId}
+          tripAccessToken={tripAccessToken}
+          canEdit={canEdit}
+          docRevision={docRevision}
+          editDoc={false}
+          editItinerary={true}
+          onNeedRefresh={refreshFromServer}
+        />
+      )}
 
       {formOpen && (
         <FormCard>
-          <Row>
-            <div style={{ fontWeight: 900 }}>
-              {editingId ? 'Edit itinerary item' : 'Add itinerary item'}
-            </div>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '0.75rem',
+            }}
+          >
+            <strong style={{ fontSize: '0.95rem' }}>
+              {editingId ? '✏️ Edit Itinerary Item' : '➕ Add Itinerary Item'}
+            </strong>
+            <div style={{ display: 'flex', gap: '0.4rem' }}>
               <Button
                 type="button"
                 variant="ghost"
@@ -619,164 +701,278 @@ export default function ItinerarySection({
               >
                 Cancel
               </Button>
-              <Button type="button" variant="primary" onClick={handleSave} disabled={saving}>
-                {saving ? 'Saving…' : 'Save'}
+              <Button
+                type="button"
+                variant="primary"
+                onClick={handleSave}
+                disabled={saving}
+              >
+                {saving ? 'Saving…' : 'Save Item'}
               </Button>
             </div>
-          </Row>
+          </div>
 
-          <div style={{ marginTop: '0.75rem' }}>
-            <Grid>
-              <Field>
-                <Label htmlFor="it-title">Title</Label>
-                <Input id="it-title" value={title} onChange={(e) => setTitle(e.target.value)} />
-              </Field>
-              <Field>
-                <Label htmlFor="it-type">Type</Label>
-                <Select id="it-type" value={itemType} onChange={(e) => setItemType(e.target.value)}>
-                  <option value="activity">Activity</option>
-                  <option value="transport">Transport</option>
-                  <option value="food">Food</option>
-                  <option value="lodging">Lodging</option>
-                  <option value="other">Other</option>
-                </Select>
-              </Field>
-
-              <Field>
-                <CheckboxLabel>
-                  <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />
-                  All day
-                </CheckboxLabel>
-                <Subtle>Backend will align start_time to midnight UTC when all-day.</Subtle>
-              </Field>
-
-              <Field>
-                <Label>{allDay ? 'Date' : 'Start time'}</Label>
-                {allDay ? (
-                  <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-                ) : (
-                  <Input type="datetime-local" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
-                )}
-              </Field>
-
-              {!allDay && (
-                <Field>
-                  <Label>End time (optional)</Label>
-                  <Input type="datetime-local" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
-                </Field>
-              )}
-
-              <Field>
-                <Label>Location (optional)</Label>
-                <Input value={location} onChange={(e) => setLocation(e.target.value)} />
-              </Field>
-
-              <Field>
-                <Label>Day index (optional)</Label>
-                <Input value={dayIndex} onChange={(e) => setDayIndex(e.target.value)} placeholder="1, 2, 3…" />
-              </Field>
-
-              <Field>
-                <Label>Latitude (optional)</Label>
-                <Input value={lat} onChange={(e) => setLat(e.target.value)} placeholder="48.858" />
-              </Field>
-
-              <Field>
-                <Label>Longitude (optional)</Label>
-                <Input value={lng} onChange={(e) => setLng(e.target.value)} placeholder="2.294" />
-              </Field>
-            </Grid>
-
-            <Field style={{ marginTop: '0.75rem' }}>
-              <Label>Notes (optional)</Label>
-              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
+          <Grid>
+            <Field>
+              <Label htmlFor="it-title">Title *</Label>
+              <Input
+                id="it-title"
+                placeholder="e.g. Scuba Diving, Flight to Goa…"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
             </Field>
 
-            {err && <ErrorText>{err}</ErrorText>}
-          </div>
+            <Field>
+              <Label htmlFor="it-type">Category</Label>
+              <Select
+                id="it-type"
+                value={itemType}
+                onChange={(e) => setItemType(e.target.value)}
+              >
+                <option value="activity">🎯 Activity</option>
+                <option value="transport">🚗 Transport</option>
+                <option value="food">🍽️ Food</option>
+                <option value="lodging">🏨 Lodging</option>
+                <option value="other">📌 Other</option>
+              </Select>
+            </Field>
+
+            <Field>
+              <Label>
+                {allDay ? 'Date *' : 'Start Date & Time *'}{' '}
+                <label
+                  style={{
+                    marginLeft: '0.5rem',
+                    textTransform: 'none',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={allDay}
+                    onChange={(e) => setAllDay(e.target.checked)}
+                  />{' '}
+                  All day
+                </label>
+              </Label>
+              {allDay ? (
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              ) : (
+                <Input
+                  type="datetime-local"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                />
+              )}
+            </Field>
+
+            {!allDay && (
+              <Field>
+                <Label>End Time (optional)</Label>
+                <Input
+                  type="datetime-local"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                />
+              </Field>
+            )}
+
+            <Field>
+              <Label>Location (optional)</Label>
+              <Input
+                placeholder="Place name or address"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+              />
+            </Field>
+
+            <Field>
+              <Label>Day # (optional)</Label>
+              <Input
+                type="number"
+                min="1"
+                placeholder="1, 2, 3…"
+                value={dayIndex}
+                onChange={(e) => setDayIndex(e.target.value)}
+              />
+            </Field>
+          </Grid>
+
+          <Field style={{ marginTop: '0.65rem' }}>
+            <Label>Notes (optional)</Label>
+            <Textarea
+              placeholder="Booking reference, ticket links, or meeting point…"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          </Field>
         </FormCard>
       )}
 
-      <div style={{ marginBottom: '0.9rem' }}>
-        <TripAiEditPanel
-          title="AI Edit Itinerary"
-          tripId={tripId}
-          tripAccessToken={tripAccessToken}
-          canEdit={canEdit}
-          docRevision={docRevision}
-          editDoc={false}
-          editItinerary={true}
-          onNeedRefresh={refreshFromServer}
-        />
-      </div>
-
-      {!items.length ? <Subtle>No itinerary items yet.</Subtle> : null}
-
-      {grouped.map(([groupKey, groupItems]) => (
-        <Group key={groupKey}>
-          <GroupTitle>{formatGroupLabel(groupKey, groupItems)}</GroupTitle>
-          <Timeline>
-            {groupItems.map((i, idx) => (
-              <ItemCard key={i.id || `${i.title}-${i.start_time}-${idx}`}>
-                <TimeCol>{formatTimeRange(i.start_time, i.end_time ?? null, i.all_day ?? null)}</TimeCol>
-                <MainCol>
-                  <Row>
-                    <ItemTitle title={i.title}>{i.title}</ItemTitle>
-                    <Pills>
-                      {i.all_day ? <Pill tone="primary">All day</Pill> : null}
-                      <Pill>{i.item_type}</Pill>
-                    </Pills>
-                  </Row>
-
-                  <Meta>
-                    {i.location ? (
-                      <MetaItem title={i.location}>
-                        <span>📍</span>
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {i.location}
-                        </span>
-                      </MetaItem>
-                    ) : null}
-                    {typeof i.lat === 'number' && typeof i.lng === 'number' ? (
-                      <MetaItem>
-                        <span>🧭</span>
-                        <span>
-                          {i.lat.toFixed(3)}, {i.lng.toFixed(3)}
-                        </span>
-                      </MetaItem>
-                    ) : null}
-                  </Meta>
-
-                  {i.notes ? <Notes>{i.notes}</Notes> : null}
-
-                  <Inline style={{ marginTop: '0.65rem' }}>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={() => openEdit(i)}
-                      disabled={tripAccessToken ? !canEdit : false}
-                      title={tripAccessToken && !canEdit ? 'Enable editing to edit items' : undefined}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="danger"
-                      onClick={() => handleDelete(i.id)}
-                      disabled={tripAccessToken ? !canEdit : false}
-                      title={tripAccessToken && !canEdit ? 'Enable editing to delete items' : undefined}
-                    >
-                      Delete
-                    </Button>
-                  </Inline>
-                </MainCol>
-              </ItemCard>
+      {/* 1-Click Day & Type Filters */}
+      {items.length > 0 && (
+        <FilterStrip>
+          <PillRow>
+            <FilterPill
+              type="button"
+              active={selectedGroupFilter === 'ALL'}
+              onClick={() => setSelectedGroupFilter('ALL')}
+            >
+              All Days ({items.length})
+            </FilterPill>
+            {grouped.map(([gKey, gItems]) => (
+              <FilterPill
+                key={gKey}
+                type="button"
+                active={selectedGroupFilter === gKey}
+                onClick={() =>
+                  setSelectedGroupFilter((cur) => (cur === gKey ? 'ALL' : gKey))
+                }
+              >
+                {formatGroupLabel(gKey, gItems)} ({gItems.length})
+              </FilterPill>
             ))}
-          </Timeline>
-        </Group>
-      ))}
+          </PillRow>
+
+          <PillRow>
+            {(['ALL', 'activity', 'transport', 'food', 'lodging'] as const).map((t) => (
+              <FilterPill
+                key={t}
+                type="button"
+                active={selectedTypeFilter === t}
+                onClick={() =>
+                  setSelectedTypeFilter((cur) => (cur === t ? 'ALL' : t))
+                }
+              >
+                {t === 'ALL' ? 'All Types' : `${TYPE_ICONS[t] || '📌'} ${t}`}
+              </FilterPill>
+            ))}
+          </PillRow>
+        </FilterStrip>
+      )}
+
+      {visibleGroups.length === 0 ? (
+        <div
+          style={{
+            textAlign: 'center',
+            padding: '2.5rem 1rem',
+            borderRadius: '12px',
+            border: '1px dashed rgba(148, 163, 184, 0.35)',
+            opacity: 0.75,
+          }}
+        >
+          {items.length === 0
+            ? 'No itinerary items yet. Click "+ Add Activity" or "✨ AI Plan Itinerary" to build your schedule!'
+            : 'No itinerary items match your active filters.'}
+        </div>
+      ) : (
+        visibleGroups.map(([groupKey, groupItems]) => (
+          <Group key={groupKey}>
+            <GroupTitle>
+              <span>{formatGroupLabel(groupKey, groupItems)}</span>
+              <span>
+                {groupItems.length} item{groupItems.length === 1 ? '' : 's'}
+              </span>
+            </GroupTitle>
+            <Timeline>
+              {groupItems.map((i, idx) => {
+                const icon = TYPE_ICONS[i.item_type] || '📌';
+                const mapQuery =
+                  typeof i.lat === 'number' && typeof i.lng === 'number'
+                    ? `${i.lat},${i.lng}`
+                    : i.location
+                    ? encodeURIComponent(i.location)
+                    : null;
+
+                return (
+                  <ItemCard key={i.id || `${i.title}-${idx}`}>
+                    <TimeCol>
+                      {formatTimeRange(
+                        i.start_time,
+                        i.end_time ?? null,
+                        i.all_day ?? null
+                      )}
+                    </TimeCol>
+
+                    <MainCol>
+                      <ItemTitleRow>
+                        <ItemTitle>
+                          {icon} {i.title}
+                        </ItemTitle>
+                        <TypeBadge>{i.item_type}</TypeBadge>
+                      </ItemTitleRow>
+
+                      {(i.location || mapQuery || i.notes) && (
+                        <MetaRow>
+                          {i.location && <span>📍 {i.location}</span>}
+                          {mapQuery && (
+                            <MapLink
+                              href={`https://www.google.com/maps/search/?api=1&query=${mapQuery}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              ↗ Open Map
+                            </MapLink>
+                          )}
+                          {i.notes && <span style={{ opacity: 0.9 }}>• {i.notes}</span>}
+                        </MetaRow>
+                      )}
+                    </MainCol>
+
+                    <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => openEdit(i)}
+                        disabled={tripAccessToken ? !canEdit : false}
+                        style={{ padding: '0.35rem 0.6rem' }}
+                      >
+                        ✏️
+                      </Button>
+                      {confirmDeleteId === i.id ? (
+                        <>
+                          <Button
+                            type="button"
+                            variant="danger"
+                            onClick={() => void handleDelete(i.id)}
+                            style={{ padding: '0.35rem 0.6rem' }}
+                          >
+                            Confirm
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => setConfirmDeleteId(null)}
+                            style={{ padding: '0.35rem 0.6rem' }}
+                          >
+                            No
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => setConfirmDeleteId(i.id)}
+                          disabled={tripAccessToken ? !canEdit : false}
+                          style={{ padding: '0.35rem 0.6rem' }}
+                        >
+                          🗑️
+                        </Button>
+                      )}
+                    </div>
+                  </ItemCard>
+                );
+              })}
+            </Timeline>
+          </Group>
+        ))
+      )}
     </Wrapper>
   );
 }
-
-

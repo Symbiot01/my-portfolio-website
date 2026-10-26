@@ -10,7 +10,8 @@ import { format } from 'date-fns';
 const BlogContainer = styled.div`
   max-width: 800px;
   margin: 0 auto;
-  padding: 4rem 2rem;
+  padding: 6rem 2rem 4rem;
+  color: ${({ theme }) => theme.text};
 `;
 
 const Header = styled.header`
@@ -19,13 +20,16 @@ const Header = styled.header`
 `;
 
 const PostCard = styled.div`
-  border: 1px solid #eee;
+  border: 1px solid ${({ theme }) => theme.border};
+  background: ${({ theme }) => theme.cardBg};
+  color: ${({ theme }) => theme.text};
   padding: 1.5rem;
-  border-radius: 8px;
-  margin-bottom: 2rem;
-  transition: box-shadow 0.2s ease;
+  border-radius: 12px;
+  margin-bottom: 1.25rem;
+  transition: border-color 0.2s ease, transform 0.2s ease;
   &:hover {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-color: ${({ theme }) => theme.primary};
+    transform: translateY(-2px);
   }
 `;
 
@@ -77,7 +81,7 @@ export default function BlogIndexPage() {
             <Link href={`/blog/${post.slug}`} key={post.id} style={{ textDecoration: 'none', color: 'inherit' }}>
               <PostCard>
                 <h2>{post.title}</h2>
-                <p style={{ color: '#666', fontSize: '0.9rem' }}>
+                <p style={{ color: 'inherit', opacity: 0.72, fontSize: '0.9rem' }}>
                   {format(new Date(post.createdAt), 'MMMM d, yyyy')} by {post.author.username}
                 </p>
                 <p>{post.excerpt}</p>

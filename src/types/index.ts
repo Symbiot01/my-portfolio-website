@@ -96,6 +96,8 @@ export interface ExpenseCreate {
   split_with_member_ids?: string[];
   split_type?: 'equal' | 'exact';
   custom_splits?: { member_id: string; amount: number }[];
+  category?: string | null;
+  date?: string | null;
 }
 
 export interface ExpenseUpdate {
@@ -105,6 +107,8 @@ export interface ExpenseUpdate {
   split_with_member_ids?: string[] | null;
   split_type?: 'equal' | 'exact' | null;
   custom_splits?: { member_id: string; amount: number }[] | null;
+  category?: string | null;
+  date?: string | null;
 }
 
 export interface ExpenseRead extends ExpenseUpdate {
@@ -142,6 +146,7 @@ export interface SettlementRead {
 export interface BalanceEntry {
   member_id: string;
   balance: number;
+  display_name?: string;
 }
 
 export interface LinkExpiryUpdate {
@@ -163,8 +168,54 @@ export type JsonPatchOp =
   | { op: 'add' | 'replace'; path: string; value: unknown };
 
 export interface TripDocDateRange {
-  start: string; // YYYY-MM-DD
-  end: string; // YYYY-MM-DD
+  start?: string | null; // YYYY-MM-DD
+  end?: string | null; // YYYY-MM-DD
+}
+
+export interface TripTravelPoint {
+  date: string; // YYYY-MM-DD
+  city?: string | null;
+  notes?: string | null;
+}
+
+export interface TripLodgingStay {
+  lodging_id: string;
+  from_night: string; // YYYY-MM-DD
+  to_night_exclusive: string; // YYYY-MM-DD
+  notes?: string | null;
+}
+
+export interface TripMemberTravelSegment {
+  arrival: TripTravelPoint;
+  departure: TripTravelPoint;
+  lodging_stay?: TripLodgingStay | null;
+}
+
+export interface TripMemberDoc {
+  member_id: string;
+  display_name: string;
+  travel_segments: TripMemberTravelSegment[];
+  notes?: string | null;
+}
+
+export interface TripBookingNights {
+  check_in_date: string; // YYYY-MM-DD
+  check_out_date: string; // YYYY-MM-DD
+  nights: number;
+  check_in_time_note?: string | null;
+  check_out_time_note?: string | null;
+}
+
+export interface TripLodgingDoc {
+  lodging_id: string;
+  name: string;
+  city?: string | null;
+  address?: string | null;
+  booking_nights: TripBookingNights;
+  rooms?: number | null;
+  confirmation_code?: string | null;
+  contact_phone?: string | null;
+  notes?: string | null;
 }
 
 export interface TripDoc {
@@ -172,8 +223,8 @@ export interface TripDoc {
   timezone: string;
   title: string;
   date_range?: TripDocDateRange | null;
-  members: unknown[]; // travel segments (v2); render later
-  lodgings: unknown[]; // hotels (v2); render later
+  members: TripMemberDoc[];
+  lodgings: TripLodgingDoc[];
   natural_language_trip_brief: string;
   shared_notes: string;
   revision: number;
@@ -185,14 +236,16 @@ export interface TripDocPatchRequest {
   patch: JsonPatchOp[];
 }
 
-export interface TripDocPatchResponse {
-  revision: number;
-  updated_at: string;
-}
+export type TripDocPatchResponse = TripDoc;
 
 export type ItineraryOp =
-  | { op: 'create'; temp_id: string; item: ItineraryItemCreate }
-  | { op: 'update'; id: string; patch: Partial<ItineraryItemUpdate> }
+  | { op: 'create'; temp_id?: string | null; item: ItineraryItemCreate }
+  | {
+      op: 'update';
+      id: string;
+      set?: Partial<ItineraryItemUpdate> | Record<string, unknown>;
+      patch?: Partial<ItineraryItemUpdate>;
+    }
   | { op: 'delete'; id: string };
 
 export interface AiProposeEditsRequest {
@@ -216,8 +269,12 @@ export interface AiApplyEditsRequest {
 }
 
 export interface AiApplyEditsResponse {
-  new_revision: number;
-  updated_at: string;
+  trip_doc?: TripDoc;
+  new_revision?: number;
+  updated_at?: string;
+  created_itinerary_ids?: string[];
+  updated_itinerary_ids?: string[];
+  deleted_itinerary_ids?: string[];
   created_item_ids?: string[];
   updated_item_ids?: string[];
   deleted_item_ids?: string[];

@@ -112,9 +112,27 @@ const getWishlistHeaders = (
   return headers;
 };
 
+const throwApiError = async (res: Response, fallback: string): Promise<never> => {
+  let detailMessage = fallback;
+  try {
+    const body = await res.json();
+    if (typeof body?.detail === 'string' && body.detail.trim()) {
+      detailMessage = body.detail;
+    } else if (Array.isArray(body?.detail) && body.detail[0]?.msg) {
+      detailMessage = body.detail.map((d: { msg?: string }) => d.msg).filter(Boolean).join('; ');
+    }
+  } catch {
+    // ignore non-JSON body
+  }
+  const err = new Error(detailMessage) as Error & { status?: number };
+  err.status = res.status;
+  throw err;
+};
+
 // We'll add functions for login, getMe, etc. here later.
 
 export const api = {
+  hasSession: (): boolean => Boolean(parseCookies()[AUTH_TOKEN_KEY]),
   // --- Authentication ---
   login: async (email: string, pass: string): Promise<{ access_token: string }> => {
     const res = await fetch(apiUrl(`/api/auth/jwt/login`), {
@@ -124,14 +142,16 @@ export const api = {
     });
 
     if (!res.ok) {
-      throw new Error('Authentication failed');
+      await throwApiError(res, 'Authentication failed');
     }
     const data = await res.json();
     
-    // Set the token in a cookie
+    // Set the token in a cookie with hardened security attributes
     setCookie(null, AUTH_TOKEN_KEY, data.access_token, {
       maxAge: 30 * 24 * 60 * 60, // 30 days
       path: '/',
+      sameSite: 'lax',
+      secure: typeof window !== 'undefined' && window.location.protocol === 'https:',
     });
     
     return data;
@@ -236,7 +256,7 @@ export const api = {
       headers: getTripSyncHeaders(),
       cache: 'no-store',
     });
-    if (!res.ok) throw new Error('Failed to fetch trips');
+    if (!res.ok) await throwApiError(res, 'Failed to fetch trips');
     return res.json();
   },
 
@@ -246,7 +266,7 @@ export const api = {
       headers: getTripSyncHeaders(undefined, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error('Failed to create trip');
+    if (!res.ok) await throwApiError(res, 'Failed to create trip');
     return res.json();
   },
 
@@ -255,7 +275,7 @@ export const api = {
       headers: getTripSyncHeaders(opts),
       cache: 'no-store',
     });
-    if (!res.ok) throw new Error('Failed to fetch trip');
+    if (!res.ok) await throwApiError(res, 'Failed to fetch trip');
     return res.json();
   },
 
@@ -266,7 +286,7 @@ export const api = {
       headers: getTripSyncHeaders(opts, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error('Failed to add member');
+    if (!res.ok) await throwApiError(res, 'Failed to add member');
     return res.json();
   },
 
@@ -276,7 +296,7 @@ export const api = {
       headers: getTripSyncHeaders(undefined, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error('Failed to link self');
+    if (!res.ok) await throwApiError(res, 'Failed to link self');
     return res.json();
   },
 
@@ -286,7 +306,7 @@ export const api = {
       headers: getTripSyncHeaders(opts),
       cache: 'no-store',
     });
-    if (!res.ok) throw new Error('Failed to list itinerary');
+    if (!res.ok) await throwApiError(res, 'Failed to list itinerary');
     return res.json();
   },
 
@@ -296,7 +316,7 @@ export const api = {
       headers: getTripSyncHeaders(opts, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error('Failed to add itinerary item');
+    if (!res.ok) await throwApiError(res, 'Failed to add itinerary item');
   },
 
   updateItinerary: async (tripId: string, itemId: string, payload: ItineraryItemUpdate, opts?: TripSyncRequestOptions): Promise<void> => {
@@ -305,7 +325,7 @@ export const api = {
       headers: getTripSyncHeaders(opts, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error('Failed to update itinerary item');
+    if (!res.ok) await throwApiError(res, 'Failed to update itinerary item');
   },
 
   deleteItinerary: async (tripId: string, itemId: string, opts?: TripSyncRequestOptions): Promise<void> => {
@@ -313,7 +333,7 @@ export const api = {
       method: 'DELETE',
       headers: getTripSyncHeaders(opts),
     });
-    if (!res.ok) throw new Error('Failed to delete itinerary item');
+    if (!res.ok) await throwApiError(res, 'Failed to delete itinerary item');
   },
 
   // Expenses
@@ -322,7 +342,7 @@ export const api = {
       headers: getTripSyncHeaders(opts),
       cache: 'no-store',
     });
-    if (!res.ok) throw new Error('Failed to list expenses');
+    if (!res.ok) await throwApiError(res, 'Failed to list expenses');
     return res.json();
   },
 
@@ -332,7 +352,7 @@ export const api = {
       headers: getTripSyncHeaders(opts, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error('Failed to add expense');
+    if (!res.ok) await throwApiError(res, 'Failed to add expense');
   },
 
   updateExpense: async (tripId: string, expenseId: string, payload: ExpenseUpdate, opts?: TripSyncRequestOptions): Promise<void> => {
@@ -341,7 +361,7 @@ export const api = {
       headers: getTripSyncHeaders(opts, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error('Failed to update expense');
+    if (!res.ok) await throwApiError(res, 'Failed to update expense');
   },
 
   deleteExpense: async (tripId: string, expenseId: string, opts?: TripSyncRequestOptions): Promise<void> => {
@@ -349,7 +369,7 @@ export const api = {
       method: 'DELETE',
       headers: getTripSyncHeaders(opts),
     });
-    if (!res.ok) throw new Error('Failed to delete expense');
+    if (!res.ok) await throwApiError(res, 'Failed to delete expense');
   },
 
   getBalances: async (tripId: string, opts?: TripSyncRequestOptions): Promise<BalanceEntry[]> => {
@@ -357,7 +377,7 @@ export const api = {
       headers: getTripSyncHeaders(opts),
       cache: 'no-store',
     });
-    if (!res.ok) throw new Error('Failed to get balances');
+    if (!res.ok) await throwApiError(res, 'Failed to get balances');
     return res.json();
   },
 
@@ -367,7 +387,7 @@ export const api = {
       headers: getTripSyncHeaders(opts),
       cache: 'no-store',
     });
-    if (!res.ok) throw new Error('Failed to list settlements');
+    if (!res.ok) await throwApiError(res, 'Failed to list settlements');
     return res.json();
   },
 
@@ -377,7 +397,7 @@ export const api = {
       headers: getTripSyncHeaders(opts, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error('Failed to add settlement');
+    if (!res.ok) await throwApiError(res, 'Failed to add settlement');
   },
 
   updateSettlement: async (tripId: string, settlementId: string, payload: SettlementUpdate, opts?: TripSyncRequestOptions): Promise<void> => {
@@ -386,7 +406,7 @@ export const api = {
       headers: getTripSyncHeaders(opts, { 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error('Failed to update settlement');
+    if (!res.ok) await throwApiError(res, 'Failed to update settlement');
   },
 
   deleteSettlement: async (tripId: string, settlementId: string, opts?: TripSyncRequestOptions): Promise<void> => {
@@ -394,7 +414,7 @@ export const api = {
       method: 'DELETE',
       headers: getTripSyncHeaders(opts),
     });
-    if (!res.ok) throw new Error('Failed to delete settlement');
+    if (!res.ok) await throwApiError(res, 'Failed to delete settlement');
   },
 
   // Share Links
@@ -403,7 +423,7 @@ export const api = {
       headers: { ...getAuthHeaders() },
       cache: 'no-store',
     });
-    if (!res.ok) throw new Error('Failed to get link');
+    if (!res.ok) await throwApiError(res, 'Failed to get link');
     return res.json();
   },
 
@@ -412,7 +432,7 @@ export const api = {
       method: 'POST',
       headers: { ...getAuthHeaders() },
     });
-    if (!res.ok) throw new Error('Failed to rotate link');
+    if (!res.ok) await throwApiError(res, 'Failed to rotate link');
     return res.json();
   },
 
@@ -421,7 +441,7 @@ export const api = {
       method: 'POST',
       headers: { ...getAuthHeaders() },
     });
-    if (!res.ok) throw new Error('Failed to revoke link');
+    if (!res.ok) await throwApiError(res, 'Failed to revoke link');
   },
 
   updateLinkExpiry: async (tripId: string, payload: LinkExpiryUpdate): Promise<void> => {
@@ -430,13 +450,13 @@ export const api = {
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error('Failed to update link expiry');
+    if (!res.ok) await throwApiError(res, 'Failed to update link expiry');
   },
 
   // Public preview
   previewTripByAccess: async (accessToken: string): Promise<TripRead> => {
     const res = await fetch(apiUrl(`/api/tripsync/access/${accessToken}`));
-    if (!res.ok) throw new Error('Failed to preview trip');
+    if (!res.ok) await throwApiError(res, 'Failed to preview trip');
     return res.json();
   },
 
@@ -446,7 +466,7 @@ export const api = {
       headers: getTripSyncHeaders(opts),
       cache: 'no-store',
     });
-    if (!res.ok) throw new Error('Failed to fetch trip doc');
+    if (!res.ok) await throwApiError(res, 'Failed to fetch trip doc');
     return res.json();
   },
 
@@ -461,10 +481,7 @@ export const api = {
       body: JSON.stringify(payload),
     });
     if (!res.ok) {
-      // Allow callers to detect 409 for optimistic concurrency.
-      const err = new Error('Failed to update trip doc') as Error & { status?: number };
-      err.status = res.status;
-      throw err;
+      await throwApiError(res, 'Failed to update trip doc');
     }
     return res.json();
   },
@@ -481,9 +498,7 @@ export const api = {
       body: JSON.stringify(payload),
     });
     if (!res.ok) {
-      const err = new Error(`Failed to propose AI edits (HTTP ${res.status})`) as Error & { status?: number };
-      err.status = res.status;
-      throw err;
+      await throwApiError(res, `Failed to propose AI edits (HTTP ${res.status})`);
     }
     return res.json();
   },
@@ -499,9 +514,7 @@ export const api = {
       body: JSON.stringify(payload),
     });
     if (!res.ok) {
-      const err = new Error('Failed to apply AI edits') as Error & { status?: number };
-      err.status = res.status;
-      throw err;
+      await throwApiError(res, 'Failed to apply AI edits');
     }
     return res.json();
   },

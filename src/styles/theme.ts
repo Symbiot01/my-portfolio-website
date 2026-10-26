@@ -14,6 +14,8 @@ export const lightTheme = {
   toggleBg: '#f4f1ed',
   cardBg: '#ffffff',
   titleGradient: 'linear-gradient(90deg, #4f46e5, #22d3ee)',
+  gradient: 'linear-gradient(90deg, #4f46e5, #22d3ee)',
+  shadow: 'rgba(15, 23, 42, 0.08)',
 };
 
 export const darkTheme = {
@@ -28,6 +30,8 @@ export const darkTheme = {
   toggleBg: '#1e293b',
   cardBg: '#1a2233',
   titleGradient: 'linear-gradient(90deg, #84fab0, #8fd3f4)',
+  gradient: 'linear-gradient(90deg, #84fab0, #8fd3f4)',
+  shadow: 'rgba(0, 0, 0, 0.35)',
 };
 
 // ✅ Add this:
