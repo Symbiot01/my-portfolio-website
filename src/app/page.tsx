@@ -1,6 +1,5 @@
-// src/app/page.tsx
 // File: src/app/page.tsx
-// Description: Main homepage component assembling all portfolio sections.
+// Description: Main Deep Space Observatory portfolio homepage assembling all sections.
 'use client';
 
 import Navbar from '@/sections/home/Navbar';
@@ -10,12 +9,11 @@ import Skills from '../sections/home/Skills';
 import Research from '../sections/home/Research';
 import Gallery from '../sections/home/Gallery';
 import BlogPreview from '../sections/home/BlogPreview';
-import About from '../sections/home/About';
 import Contact from '../sections/home/Contact';
 
 export default function HomePage() {
   return (
-    <main>
+    <main id="top">
       <Navbar />
       <Hero />
       <Projects />
@@ -23,7 +21,6 @@ export default function HomePage() {
       <Research />
       <BlogPreview />
       <Gallery />
-      <About />
       <Contact />
     </main>
   );

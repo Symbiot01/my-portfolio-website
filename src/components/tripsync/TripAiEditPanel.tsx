@@ -292,6 +292,7 @@ export default function TripAiEditPanel({
   } | null>(null);
   const [proposal, setProposal] = useState<AiProposeEditsResponse | null>(null);
   const [localDocRevision, setLocalDocRevision] = useState<number | null>(null);
+  const [viewMode, setViewMode] = useState<'human' | 'json'>('human');
 
   useEffect(() => {
     setProposal(null);
@@ -480,7 +481,14 @@ export default function TripAiEditPanel({
               <Badge>Doc patches: {proposal.trip_doc_patch.length}</Badge>
               <Badge>Itinerary ops: {proposal.itinerary_ops.length}</Badge>
             </div>
-            <div style={{ display: 'flex', gap: '0.45rem' }}>
+            <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setViewMode((m) => (m === 'human' ? 'json' : 'human'))}
+              >
+                {viewMode === 'human' ? '{ } View Raw JSON Diff' : '✦ Human Summary'}
+              </Button>
               <Button
                 type="button"
                 variant="primary"
@@ -492,47 +500,72 @@ export default function TripAiEditPanel({
             </div>
           </ProposalHeader>
 
-          <ProposalGrid>
-            {(editDoc || proposal.trip_doc_patch.length > 0) && (
-              <ProposalPane>
-                <Muted style={{ fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>
-                  Trip Details Patch
-                </Muted>
-                {proposal.trip_doc_patch.length === 0 ? (
-                  <Muted style={{ marginTop: '0.35rem' }}>No document changes</Muted>
-                ) : (
-                  <ProposalList>
-                    {proposal.trip_doc_patch.map((op, idx) => (
-                      <ProposalItem key={idx}>
-                        <span style={{ wordBreak: 'break-word' }}>{summarizePatch(op)}</span>
-                      </ProposalItem>
-                    ))}
-                  </ProposalList>
-                )}
-              </ProposalPane>
-            )}
+          {viewMode === 'json' ? (
+            <pre
+              style={{
+                marginTop: '0.65rem',
+                padding: '0.85rem',
+                borderRadius: '10px',
+                background: '#090d1a',
+                color: '#cbd5e1',
+                fontFamily: 'var(--font-mono), monospace',
+                fontSize: '0.75rem',
+                overflowX: 'auto',
+                border: '1px solid rgba(148, 163, 184, 0.2)',
+              }}
+            >
+              {JSON.stringify(
+                {
+                  trip_doc_patch: proposal.trip_doc_patch,
+                  itinerary_ops: proposal.itinerary_ops,
+                },
+                null,
+                2
+              )}
+            </pre>
+          ) : (
+            <ProposalGrid>
+              {(editDoc || proposal.trip_doc_patch.length > 0) && (
+                <ProposalPane>
+                  <Muted style={{ fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>
+                    Trip Details Summary
+                  </Muted>
+                  {proposal.trip_doc_patch.length === 0 ? (
+                    <Muted style={{ marginTop: '0.35rem' }}>No document changes</Muted>
+                  ) : (
+                    <ProposalList>
+                      {proposal.trip_doc_patch.map((op, idx) => (
+                        <ProposalItem key={idx}>
+                          <span style={{ wordBreak: 'break-word' }}>{summarizePatch(op)}</span>
+                        </ProposalItem>
+                      ))}
+                    </ProposalList>
+                  )}
+                </ProposalPane>
+              )}
 
-            {(editItinerary || proposal.itinerary_ops.length > 0) && (
-              <ProposalPane>
-                <Muted style={{ fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>
-                  Itinerary Operations
-                </Muted>
-                {proposal.itinerary_ops.length === 0 ? (
-                  <Muted style={{ marginTop: '0.35rem' }}>No itinerary changes</Muted>
-                ) : (
-                  <ProposalList>
-                    {proposal.itinerary_ops.map((op, idx) => (
-                      <ProposalItem key={idx}>
-                        <span style={{ wordBreak: 'break-word' }}>
-                          {summarizeItineraryOp(op)}
-                        </span>
-                      </ProposalItem>
-                    ))}
-                  </ProposalList>
-                )}
-              </ProposalPane>
-            )}
-          </ProposalGrid>
+              {(editItinerary || proposal.itinerary_ops.length > 0) && (
+                <ProposalPane>
+                  <Muted style={{ fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>
+                    Itinerary Changes
+                  </Muted>
+                  {proposal.itinerary_ops.length === 0 ? (
+                    <Muted style={{ marginTop: '0.35rem' }}>No itinerary changes</Muted>
+                  ) : (
+                    <ProposalList>
+                      {proposal.itinerary_ops.map((op, idx) => (
+                        <ProposalItem key={idx}>
+                          <span style={{ wordBreak: 'break-word' }}>
+                            {summarizeItineraryOp(op)}
+                          </span>
+                        </ProposalItem>
+                      ))}
+                    </ProposalList>
+                  )}
+                </ProposalPane>
+              )}
+            </ProposalGrid>
+          )}
         </ProposalCard>
       )}
     </Wrapper>

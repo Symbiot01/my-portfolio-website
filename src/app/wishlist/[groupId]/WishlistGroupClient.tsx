@@ -110,6 +110,21 @@ const Fab = styled.button`
   }
 `;
 
+const AntiSpoilerBanner = styled.div<{ $spoilerOn: boolean }>`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${wl.space(1.5)};
+  flex-wrap: wrap;
+  padding: ${wl.space(1.5)} ${wl.space(2)};
+  margin-bottom: ${wl.space(3)};
+  border-radius: ${wl.radiusMd}px;
+  border: 1px solid ${({ $spoilerOn }) => ($spoilerOn ? wl.reserved : wl.primary)};
+  background: ${({ $spoilerOn }) => ($spoilerOn ? wl.tertiarySoft : wl.primarySoft)};
+  color: ${wl.ink};
+  font: ${wl.font.bodySm};
+`;
+
 const Toolbar = styled.div`
   display: flex;
   justify-content: space-between;
@@ -417,6 +432,41 @@ export default function WishlistGroupPage() {
               onClaimSlot={onClaimSlot}
               onJoinAsSelf={onJoinAsSelf}
             />
+          )}
+
+          {group && (
+            <AntiSpoilerBanner $spoilerOn={!!group.settings?.owners_can_see_fulfillment}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+                <span style={{ fontSize: '1.05rem' }}>
+                  {group.settings?.owners_can_see_fulfillment ? '👁️' : '🛡️'}
+                </span>
+                <div>
+                  <strong style={{ display: 'block', fontSize: '0.86rem' }}>
+                    {group.settings?.owners_can_see_fulfillment
+                      ? 'Spoiler Mode Active — Full Transparency'
+                      : 'Surprise Protection Active'}
+                  </strong>
+                  <span style={{ color: wl.inkMuted, fontSize: '0.8rem' }}>
+                    {group.settings?.owners_can_see_fulfillment
+                      ? 'List owners can see when their items are reserved or purchased.'
+                      : 'Owners cannot see who reserved or purchased their items — the surprise stays intact.'}
+                  </span>
+                </div>
+              </div>
+              <span
+                style={{
+                  fontFamily: 'var(--font-mono), monospace',
+                  fontSize: '0.74rem',
+                  padding: '0.2rem 0.55rem',
+                  borderRadius: '999px',
+                  border: `1px solid ${wl.border}`,
+                  background: wl.surface,
+                  color: wl.inkMuted,
+                }}
+              >
+                Max {group.settings?.max_active_reservations ?? 2} active reservations / guest
+              </span>
+            </AntiSpoilerBanner>
           )}
 
           <Toolbar>

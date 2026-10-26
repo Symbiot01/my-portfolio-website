@@ -38,8 +38,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     window.localStorage.setItem(THEME_STORAGE_KEY, mode);
     document.documentElement.dataset.theme = mode;
     document.documentElement.style.colorScheme = mode;
-    document.documentElement.style.backgroundColor = isDarkMode ? '#0f141c' : '#faf8f5';
-    document.documentElement.style.color = isDarkMode ? '#e2e8f0' : '#1e293b';
+    document.documentElement.style.backgroundColor = isDarkMode ? '#070a14' : '#f8fafc';
+    document.documentElement.style.color = isDarkMode ? '#e2e8f0' : '#0f172a';
   }, [hydrated, isDarkMode]);
 
   const toggleTheme = () => setIsDarkMode((prev) => !prev);

@@ -1,17 +1,9 @@
 'use client';
 
 import { ReactNode, Suspense } from 'react';
-import { Hanken_Grotesk } from 'next/font/google';
 import styled from '@emotion/styled';
 import { wl } from '@/styles/wishlistTheme';
 import { WishlistBottomNav, WishlistTopBar } from '@/components/wishlist/WishlistShell';
-
-const hanken = Hanken_Grotesk({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
-  variable: '--font-hanken',
-  display: 'swap',
-});
 
 const Shell = styled.div`
   min-height: 100vh;
@@ -51,7 +43,7 @@ export function WishlistAppShell({
   hideChrome,
 }: Props) {
   return (
-    <Shell className={hanken.variable} style={{ fontFamily: 'var(--font-hanken), system-ui, sans-serif' }}>
+    <Shell style={{ fontFamily: 'var(--font-sans), system-ui, sans-serif' }}>
       {!hideChrome && (
         <Suspense fallback={null}>
           <WishlistTopBar

@@ -1,132 +1,132 @@
-// File: src/sections/Gallery.tsx
-// Description: Gallery section showcasing game demos, renders, and artworks.
+// File: src/sections/home/Gallery.tsx
+// Description: Visual Vault section showcasing 3D renders, simulation scenes, and creative artworks with telemetry overlays.
 'use client';
 
+import React, { useState } from 'react';
 import styled from '@emotion/styled';
-import { useState } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 
 const Section = styled.section`
-  padding: 4rem 2rem;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 4.5rem 1.5rem;
+
+  @media (max-width: 768px) {
+    padding: 3rem 1rem;
+  }
 `;
 
-const HeadingWrapper = styled.div`
-  text-align: center;
-  margin-bottom: 3rem;
+const HeaderBar = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+`;
+
+const Eyebrow = styled.span`
+  font-family: var(--font-mono), monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: ${({ theme }) => theme.accent};
 `;
 
 const Heading = styled.h2`
-  font-size: 6rem;
-  font-weight: 900;
-  margin-bottom: 1.5rem;
-  margin-left: 4rem;
-  background: ${({ theme }) => theme.titleGradient};
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-
-  @media (max-width: 1024px) {
-    font-size: 3.5rem;
-    margin-left: 2rem;
-  }
-
-  @media (max-width: 768px) {
-    font-size: 2.5rem;
-    margin-left: 1rem;
-  }
-
-  @media (max-width: 480px) {
-    font-size: 2rem;
-    margin-left: 0.5rem;
-  }
-`;
-
-const Subheading = styled.p`
-  color: ${({ theme }) => theme.mutedText};
-  max-width: 600px;
-  margin: 0 auto;
-
-  @media (max-width: 768px) {
-    font-size: 1rem;
-    margin-left: 1rem;
-  }
-
-  @media (max-width: 480px) {
-    font-size: 0.75rem;
-    margin-left: 0.5rem;
-  }
+  font-family: var(--font-display), 'Space Grotesk', sans-serif;
+  font-size: clamp(1.85rem, 3.2vw, 2.5rem);
+  font-weight: 700;
+  color: ${({ theme }) => theme.headingText};
+  margin-top: 0.35rem;
 `;
 
 const FilterBar = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 3rem;
+  gap: 0.4rem;
+  background: ${({ theme }) => theme.toggleBg};
+  border: 1px solid ${({ theme }) => theme.border};
+  padding: 0.3rem;
+  border-radius: 10px;
 `;
 
 const FilterButton = styled.button<{ active: boolean }>`
-  padding: 0.5rem 1.25rem;
-  background: ${({ active, theme }) => (active ? theme.primary : theme.toggleBg)};
-  color: ${({ active, theme }) => (active ? '#fff' : theme.text)};
-  border: 1px solid ${({ theme }) => theme.border};
-  border-radius: 999px;
+  padding: 0.4rem 0.85rem;
+  background: ${({ active, theme }) => (active ? theme.primary : 'transparent')};
+  color: ${({ active, theme }) => (active ? '#fff' : theme.mutedText)};
+  border: none;
+  border-radius: 7px;
   cursor: pointer;
-  font-weight: 500;
-  font-size: 1.2rem;
-  transition: background 0.2s ease;
+  font-family: var(--font-mono), monospace;
+  font-weight: 600;
+  font-size: 0.76rem;
+  transition: all 0.16s ease;
 
   &:hover {
-    background: ${({ theme }) => theme.primary};
-    color: #fff;
+    color: ${({ active, theme }) => (active ? '#fff' : theme.headingText)};
   }
 `;
 
 const GalleryGrid = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3rem;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
 
-  @media (max-width: 768px) {
-    flex-direction: column;
+  @media (max-width: 1024px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
   }
 `;
 
 const Card = styled(motion.div)`
-  flex: 1 1 calc(33.33% - 2rem);
-  background: ${({ theme }) => theme.cardBg};
+  background: ${({ theme }) => `${theme.cardBg}d9`};
   border: 1px solid ${({ theme }) => theme.border};
-  border-radius: 1rem;
+  border-radius: 14px;
   overflow: hidden;
-  text-align: center;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  transition: transform 0.3s ease;
+  box-shadow: 0 8px 24px ${({ theme }) => theme.shadow};
+  transition: transform 0.22s ease, border-color 0.22s ease;
 
   &:hover {
-    transform: translateY(-6px);
+    transform: translateY(-3px);
+    border-color: ${({ theme }) => `${theme.primary}88`};
   }
+`;
 
-  img {
-    width: 100%;
-    height: 220px;
-    object-fit: cover;
-  }
+const Frame = styled.div`
+  position: relative;
+  width: 100%;
+  height: 215px;
+  background: #070a14;
+`;
+
+const CardMeta = styled.div`
+  padding: 0.9rem 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
 
   h3 {
-    font-size: 1.1rem;
+    font-family: var(--font-display), 'Space Grotesk', sans-serif;
+    font-size: 0.98rem;
     font-weight: 600;
-    padding: 1rem;
-    color: ${({ theme }) => theme.text};
+    color: ${({ theme }) => theme.headingText};
   }
 
-  @media (max-width: 1024px) {
-    flex: 1 1 calc(50% - 1rem);
-  }
-
-  @media (max-width: 768px) {
-    flex: 1 1 100%;
+  span {
+    font-family: var(--font-mono), monospace;
+    font-size: 0.68rem;
+    padding: 0.18rem 0.5rem;
+    border-radius: 5px;
+    background: ${({ theme }) => theme.toggleBg};
+    border: 1px solid ${({ theme }) => theme.border};
+    color: ${({ theme }) => theme.mutedText};
   }
 `;
 
@@ -134,33 +134,39 @@ const categories = ['All', 'GameDev', 'Creative', 'Art'];
 
 const galleryItems = [
   {
-    title: 'Self-learning Enemy AI',
+    title: 'Multi-Agent RL Soccer Arena',
     category: 'GameDev',
+    spec: 'UNITY // PPO',
     image: '/images/unity-ml-soccer.jpg',
   },
   {
-    title: 'VR Planet Explorer',
+    title: 'VR Planetary Cockpit & Shaders',
     category: 'GameDev',
+    spec: 'OPENXR // HLSL',
     image: '/images/vr-planets.jpg',
   },
   {
-    title: 'Sci-Fi Corridor Render',
+    title: 'Orbital Sci-Fi Corridor Render',
     category: 'Creative',
+    spec: 'BLENDER // CYCLES',
     image: '/images/sci-fi-corridor.jpg',
   },
   {
-    title: 'Isometric City',
+    title: 'Procedural Isometric Metropolis',
     category: 'Creative',
+    spec: '3D // LIGHTING',
     image: '/images/isometric-city.jpg',
   },
   {
-    title: 'Portrait Sketch',
+    title: 'Graphite Character Study',
     category: 'Art',
+    spec: 'TRADITIONAL',
     image: '/images/portrait-sketch.jpg',
   },
   {
-    title: 'Colorful Ink Doodle',
+    title: 'Chromatic Ink Composition',
     category: 'Art',
+    spec: 'ILLUSTRATION',
     image: '/images/ink-doodle.jpg',
   },
 ];
@@ -168,44 +174,55 @@ const galleryItems = [
 export default function Gallery() {
   const [active, setActive] = useState('All');
 
-  const filtered = active === 'All'
-    ? galleryItems
-    : galleryItems.filter(item => item.category === active);
+  const filtered =
+    active === 'All'
+      ? galleryItems
+      : galleryItems.filter((item) => item.category === active);
 
   return (
     <Section id="gallery">
-      <HeadingWrapper>
-        <Heading>Gallery</Heading>
-        <Subheading>
-          A visual showcase of game demos, renders, and original artworks.
-        </Subheading>
-      </HeadingWrapper>
+      <HeaderBar>
+        <div>
+          <Eyebrow>VISUAL_VAULT // RENDERS, SIMULATIONS & ART</Eyebrow>
+          <Heading>3D Renders & Simulation Captures</Heading>
+        </div>
 
-      <FilterBar>
-        {categories.map(cat => (
-          <FilterButton key={cat} active={active === cat} onClick={() => setActive(cat)}>
-            {cat}
-          </FilterButton>
-        ))}
-      </FilterBar>
+        <FilterBar>
+          {categories.map((cat) => (
+            <FilterButton
+              key={cat}
+              type="button"
+              active={active === cat}
+              onClick={() => setActive(cat)}
+            >
+              {cat}
+            </FilterButton>
+          ))}
+        </FilterBar>
+      </HeaderBar>
 
       <GalleryGrid>
         {filtered.map((item, i) => (
           <Card
-            key={i}
-            initial={{ opacity: 0, y: 40 }}
+            key={item.title}
+            initial={{ opacity: 0, y: 18 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: i * 0.1 }}
+            transition={{ duration: 0.35, delay: i * 0.05 }}
             viewport={{ once: true }}
           >
-            <Image
-              src={item.image}
-              alt={item.title}
-              width={800}
-              height={520}
-              style={{ width: '100%', height: '220px', objectFit: 'cover' }}
-            />
-            <h3>{item.title}</h3>
+            <Frame>
+              <Image
+                src={item.image}
+                alt={item.title}
+                fill
+                sizes="(max-width: 768px) 100vw, 33vw"
+                style={{ objectFit: 'cover' }}
+              />
+            </Frame>
+            <CardMeta>
+              <h3>{item.title}</h3>
+              <span>{item.spec}</span>
+            </CardMeta>
           </Card>
         ))}
       </GalleryGrid>

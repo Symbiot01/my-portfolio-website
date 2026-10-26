@@ -59,8 +59,10 @@ const TopRow = styled.div`
 
 const Title = styled.h1`
   margin: 0;
+  font-family: var(--font-display), sans-serif;
   font-size: clamp(1.25rem, 2.2vw, 1.6rem);
-  font-weight: 900;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   color: ${({ theme }) => theme.text};
 `;
 

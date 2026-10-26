@@ -3,9 +3,10 @@
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import styled from '@emotion/styled';
-import { Gift, List, Search, Settings, User } from 'lucide-react';
+import { Gift, List, Moon, Search, Settings, Sun, User } from 'lucide-react';
 import { wl } from '@/styles/wishlistTheme';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 
 const Bar = styled.header`
   position: sticky;
@@ -109,6 +110,7 @@ export function WishlistTopBar({ groupId, searchValue, onSearchChange }: Props) 
   const pathname = usePathname() || '';
   const searchParams = useSearchParams();
   const { user } = useAuth();
+  const { isDarkMode, toggleTheme } = useTheme();
   const tab = searchParams?.get('tab') ?? null;
 
   const combinedHref = groupId ? `/wishlist/${groupId}` : '/wishlist';
@@ -117,7 +119,21 @@ export function WishlistTopBar({ groupId, searchValue, onSearchChange }: Props) 
 
   return (
     <Bar>
-      <Logo href="/wishlist">Wishlist</Logo>
+      <Link
+        href="/"
+        style={{
+          fontFamily: 'var(--font-mono), monospace',
+          fontSize: '0.75rem',
+          color: wl.inkMuted,
+          textDecoration: 'none',
+          padding: '0.3rem 0.55rem',
+          borderRadius: '6px',
+          border: `1px solid ${wl.border}`,
+        }}
+      >
+        ← Portfolio
+      </Link>
+      <Logo href="/wishlist">Wishlist Registry</Logo>
       <Nav>
         <NavLink href={myListHref} $active={tab === 'mine' || pathname === '/wishlist'}>
           My List
@@ -136,12 +152,32 @@ export function WishlistTopBar({ groupId, searchValue, onSearchChange }: Props) 
         <Search size={18} />
         <input
           type="search"
-          placeholder="Search…"
+          placeholder="Search registry…"
           value={searchValue ?? ''}
           onChange={(e) => onSearchChange?.(e.target.value)}
           aria-label="Search products"
         />
       </SearchWrap>
+      <button
+        type="button"
+        onClick={toggleTheme}
+        aria-label="Toggle theme"
+        style={{
+          width: 38,
+          height: 38,
+          borderRadius: '10px',
+          border: `1px solid ${wl.border}`,
+          background: wl.canvas,
+          color: wl.ink,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          flexShrink: 0,
+        }}
+      >
+        {isDarkMode ? <Sun size={17} /> : <Moon size={17} />}
+      </button>
       <Profile href={user ? '/wishlist' : '/login'} aria-label="Account">
         <User size={20} />
       </Profile>

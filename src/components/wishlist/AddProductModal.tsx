@@ -364,6 +364,7 @@ export function AddProductModal({
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [fetchingIdx, setFetchingIdx] = useState<number | null>(null);
+  const [scrapeStage, setScrapeStage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
@@ -416,6 +417,7 @@ export function AddProductModal({
       return;
     }
     setFetchingIdx(idx);
+    setScrapeStage('Scraping store metadata & OpenGraph tags (Gemini + Google Images fallback ready)…');
     setError(null);
     setHint(null);
     setImageCandidates([]);
@@ -484,6 +486,7 @@ export function AddProductModal({
       setError(err instanceof Error ? err.message : 'Could not fetch link details');
     } finally {
       setFetchingIdx(null);
+      setScrapeStage(null);
     }
   };
 
@@ -769,6 +772,22 @@ export function AddProductModal({
                   <Save size={16} /> {busy ? 'Saving…' : isEdit ? 'Save Changes' : 'Save Product'}
                 </WlPrimaryButton>
               </Footer>
+              {scrapeStage && (
+                <p
+                  style={{
+                    color: wl.primaryDeep,
+                    fontFamily: 'var(--font-mono), monospace',
+                    fontSize: '0.76rem',
+                    marginTop: wl.space(1),
+                    padding: '0.5rem 0.75rem',
+                    borderRadius: '8px',
+                    background: wl.primarySoft,
+                    border: `1px solid ${wl.border}`,
+                  }}
+                >
+                  ⟳ {scrapeStage}
+                </p>
+              )}
               {hint && (
                 <p style={{ color: wl.secondary, font: wl.font.bodySm, marginTop: wl.space(1) }}>{hint}</p>
               )}

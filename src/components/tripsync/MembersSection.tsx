@@ -383,6 +383,8 @@ export default function MembersSection({
                       {Math.abs(bal) > 0.01 && (
                         <span
                           style={{
+                            fontFamily: 'var(--font-mono), monospace',
+                            fontVariantNumeric: 'tabular-nums',
                             fontSize: '0.74rem',
                             fontWeight: 700,
                             color: bal > 0 ? '#10B981' : '#EF4444',
