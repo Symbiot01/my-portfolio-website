@@ -1,705 +1,1437 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import styled from '@emotion/styled';
-import Navbar from '@/sections/home/Navbar';
-import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
-import { BalanceEntry, ItineraryItemRead, TripRead, TripLinkInfo } from '@/types';
+import {
+  TripRead,
+  ExpenseRead,
+  BalanceEntry,
+  ItineraryItemRead,
+  SettlementRead,
+  TripDoc,
+  TripLinkInfo,
+} from '@/types';
+import Navbar from '@/sections/home/Navbar';
 import MembersSection from '@/components/tripsync/MembersSection';
 import ExpensesSection from '@/components/tripsync/ExpensesSection';
-import TripDetailsSection from '@/components/tripsync/TripDetailsSection';
 import ItinerarySection from '@/components/tripsync/ItinerarySection';
-import { mockTrip, mockExpenses, mockBalances, MockExpense } from '@/lib/mockData';
-
-const extractAccessTokenFromSecretUrl = (secretUrl: string): string | null => {
-  // Expected backend URL: .../api/tripsync/access/{token}
-  const marker = '/api/tripsync/access/';
-  const idx = secretUrl.lastIndexOf(marker);
-  if (idx === -1) return null;
-  const token = secretUrl.slice(idx + marker.length).split(/[?#]/)[0]?.trim();
-  return token || null;
-};
-
-const buildFrontendAccessLink = (secretUrl: string): string | null => {
-  const token = extractAccessTokenFromSecretUrl(secretUrl);
-  if (!token) return null;
-  // Use fragment for security: avoids server logs/referrers on the frontend route
-  return `${window.location.origin}/tripsync/access#${encodeURIComponent(token)}`;
-};
+import TripDetailsSection from '@/components/tripsync/TripDetailsSection';
+import {
+  calculateOptimalSettlements,
+  computeExpenseAnalytics,
+  formatCurrency,
+  getCategoryMeta,
+} from '@/lib/expenseUtils';
 
 const PageWrapper = styled.div`
   min-height: 100vh;
   background: ${({ theme }) => theme.background};
+  color: ${({ theme }) => theme.text};
 `;
 
-const ContentWrapper = styled.div`
+const WorkspaceShell = styled.div`
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 5.25rem 1.25rem 2.5rem;
   display: flex;
-  min-height: calc(100vh - 70px);
-
-  @media (max-width: 968px) {
-    flex-direction: column;
-  }
+  flex-direction: column;
+  gap: 1rem;
 `;
 
-const Sidebar = styled.aside`
-  width: 280px;
+/* Sticky Command Bar */
+const CommandBar = styled.div`
   background: ${({ theme }) => theme.cardBg};
-  border-right: 1px solid ${({ theme }) => theme.border};
+  border: 1px solid ${({ theme }) => theme.border};
+  border-radius: 16px;
+  padding: 0.9rem 1.15rem;
   display: flex;
   flex-direction: column;
-  position: fixed;
-  left: 0;
-  top: 70px;
-  bottom: 0;
-  z-index: 30;
-  overflow-y: auto;
+  gap: 0.75rem;
+  box-shadow: 0 2px 12px ${({ theme }) => theme.shadow};
+`;
 
-  @media (max-width: 968px) {
-    position: relative;
-    width: 100%;
-    top: 0;
-    border-right: none;
-    border-bottom: 1px solid ${({ theme }) => theme.border};
+const CommandTopRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+`;
+
+const TitleArea = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+`;
+
+const BackBtn = styled.button`
+  padding: 0.4rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid ${({ theme }) => theme.border};
+  background: ${({ theme }) => theme.background};
+  color: ${({ theme }) => theme.text};
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover {
+    border-color: ${({ theme }) => theme.primary};
+    color: ${({ theme }) => theme.primary};
   }
 `;
 
-const SidebarContent = styled.div`
-  padding: 2rem 1.5rem;
-  flex: 1;
+const TripTitle = styled.h1`
+  margin: 0;
+  font-size: clamp(1.25rem, 2.2vw, 1.6rem);
+  font-weight: 900;
+  color: ${({ theme }) => theme.text};
+  letter-spacing: -0.02em;
+`;
+
+const MetaPill = styled.span<{ tone?: 'primary' | 'success' | 'warning' }>`
+  padding: 0.22rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  background: ${({ tone, theme }) =>
+    tone === 'primary'
+      ? `${theme.primary}20`
+      : tone === 'success'
+      ? '#10B98120'
+      : tone === 'warning'
+      ? '#F59E0B20'
+      : `${theme.mutedText}18`};
+  color: ${({ tone, theme }) =>
+    tone === 'primary'
+      ? theme.primary
+      : tone === 'success'
+      ? '#10B981'
+      : tone === 'warning'
+      ? '#F59E0B'
+      : theme.mutedText};
+`;
+
+const QuickActionsRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+`;
+
+const ActionBtn = styled.button<{ variant?: 'primary' | 'ghost' | 'success' }>`
+  padding: 0.45rem 0.8rem;
+  border-radius: 9px;
+  border: 1px solid
+    ${({ variant, theme }) =>
+      variant === 'primary'
+        ? theme.primary
+        : variant === 'success'
+        ? '#10B981'
+        : theme.border};
+  background: ${({ variant, theme }) =>
+    variant === 'primary'
+      ? theme.primary
+      : variant === 'success'
+      ? '#10B981'
+      : theme.background};
+  color: ${({ variant, theme }) =>
+    variant === 'primary' || variant === 'success' ? '#fff' : theme.text};
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+
+  &:hover:not(:disabled) {
+    opacity: 0.92;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+/* Section Tabs Bar (1-click least-click navigation) */
+const TabsRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  overflow-x: auto;
+  padding-top: 0.55rem;
+  border-top: 1px solid ${({ theme }) => theme.border};
+`;
+
+const TabButton = styled.button<{ active: boolean }>`
+  padding: 0.48rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid ${({ active, theme }) => (active ? theme.primary : 'transparent')};
+  background: ${({ active, theme }) =>
+    active ? `${theme.primary}18` : 'transparent'};
+  color: ${({ active, theme }) => (active ? theme.primary : theme.text)};
+  font-size: 0.83rem;
+  font-weight: ${({ active }) => (active ? 800 : 600)};
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: ${({ active, theme }) =>
+      active ? `${theme.primary}22` : `${theme.primary}10`};
+  }
+`;
+
+const TabCount = styled.span<{ active: boolean }>`
+  padding: 0.08rem 0.42rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  background: ${({ active, theme }) =>
+    active ? theme.primary : `${theme.mutedText}22`};
+  color: ${({ active, theme }) => (active ? '#fff' : theme.mutedText)};
+`;
+
+/* Overview Dashboard Layout */
+const OverviewGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 1rem;
+  align-items: start;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const PanelCard = styled.div`
+  background: ${({ theme }) => theme.cardBg};
+  border: 1px solid ${({ theme }) => theme.border};
+  border-radius: 14px;
+  padding: 1.05rem;
   display: flex;
   flex-direction: column;
-
-  @media (max-width: 768px) {
-    padding: 0.9rem 1rem;
-  }
+  gap: 0.75rem;
+  box-shadow: 0 2px 8px ${({ theme }) => theme.shadow};
 `;
 
-const TripInfo = styled.div`
-  margin-bottom: 2.5rem;
-  padding-bottom: 2rem;
-  border-bottom: 2px solid ${({ theme }) => theme.border};
-
-  @media (max-width: 768px) {
-                                                                                                                    margin-bottom: 0.5rem;
-    padding-bottom: 0.5rem;
-    border-bottom-width: 1px;
-  }
-`;
-
-const TripTitleRow = styled.div`
+const PanelHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
+  flex-wrap: wrap;
 `;
 
-const TripTitle = styled.h2`
-  font-size: 1.4rem;
+const PanelTitle = styled.h3`
+  margin: 0;
+  font-size: 0.96rem;
   font-weight: 800;
-  margin-bottom: 0.75rem;
   color: ${({ theme }) => theme.text};
-  background: ${({ theme }) => theme.titleGradient};
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-  margin-top: 0;
-
-  @media (max-width: 768px) {
-    margin-bottom: 0;
-    font-size: 1.25rem;
-  }
-`;
-
-const TripDescription = styled.p`
-  font-size: 0.85rem;
-  color: ${({ theme }) => theme.mutedText};
-  line-height: 1.5;
-  margin-bottom: 0.75rem;
-
-  @media (max-width: 768px) {
-    display: none;
-  }
-`;
-
-const TripMeta = styled.div`
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.8rem;
-  color: ${({ theme }) => theme.mutedText};
-  padding: 0.5rem 0.75rem;
-  background: ${({ theme }) => theme.background};
-  border-radius: 6px;
-  margin-top: 0.75rem;
-
-  @media (max-width: 768px) {
-    display: none;
-  }
+  gap: 0.45rem;
 `;
 
-const NavSection = styled.nav`
-  display: flex;
-  flex-direction: column;
+const KpiStrip = styled.div`
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: 0.75rem;
 
-  /* On phones we move section navigation into a hamburger menu */
-  @media (max-width: 768px) {
-    display: none;
+  @media (max-width: 860px) {
+    grid-template-columns: repeat(2, 1fr);
   }
 `;
 
-const NavButton = styled.button<{ active: boolean }>`
-  padding: 1rem 1.25rem;
-  border-radius: 10px;
-  border: none;
-  background: ${({ active, theme }) => (active ? theme.primary : 'transparent')};
-  color: ${({ active, theme }) => (active ? '#fff' : theme.text)};
-  font-size: 0.95rem;
-  font-weight: ${({ active }) => (active ? 700 : 500)};
-  text-align: left;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-
-  &::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 4px;
-    height: ${({ active }) => (active ? '60%' : '0')};
-    background: ${({ theme }) => theme.accent};
-    border-radius: 0 4px 4px 0;
-    transition: height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  &:hover {
-    background: ${({ active, theme }) => (active ? theme.primary : theme.toggleBg)};
-    transform: translateX(4px);
-    
-    &::before {
-      height: 60%;
-    }
-  }
-
-  &:active {
-    transform: translateX(2px) scale(0.98);
-  }
-`;
-
-const TripMenuButton = styled.button`
-  display: none;
-  border: 1px solid ${({ theme }) => theme.border};
+const KpiBox = styled.div`
   background: ${({ theme }) => theme.cardBg};
-  color: ${({ theme }) => theme.text};
-  padding: 0.45rem 0.55rem;
-  border-radius: 9px;
+  border: 1px solid ${({ theme }) => theme.border};
+  border-radius: 13px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
   cursor: pointer;
-  line-height: 1;
-  font-size: 1.05rem;
-  min-width: 40px;
-  min-height: 40px;
-  align-items: center;
-  justify-content: center;
+  transition: border-color 0.15s ease;
 
   &:hover {
     border-color: ${({ theme }) => theme.primary};
   }
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.primary};
-    outline-offset: 2px;
-  }
-
-  @media (max-width: 768px) {
-    display: inline-flex;
-  }
 `;
 
-const MobileOverlay = styled.div<{ open: boolean }>`
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  z-index: 90;
-  display: ${({ open }) => (open ? 'block' : 'none')};
-`;
-
-const MobileMenu = styled.div`
-  position: fixed;
-  top: 70px; /* navbar height */
-  right: 12px;
-  left: 12px;
-  background: ${({ theme }) => theme.surface};
-  border: 1px solid ${({ theme }) => theme.border};
-  border-radius: 12px;
-  z-index: 91;
-  padding: 0.5rem;
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.16);
-
-  @media (min-width: 769px) {
-    display: none;
-  }
-`;
-
-const MobileMenuItem = styled.button<{ active: boolean }>`
-  width: 100%;
-  text-align: left;
-  padding: 0.85rem 0.8rem;
-  border-radius: 10px;
-  border: 1px solid transparent;
-  background: ${({ active, theme }) => (active ? theme.primary : 'transparent')};
-  color: ${({ active, theme }) => (active ? '#fff' : theme.text)};
-  font-weight: ${({ active }) => (active ? 800 : 650)};
-  letter-spacing: 0.02em;
+const KpiLabel = styled.span`
+  font-size: 0.72rem;
+  font-weight: 700;
   text-transform: uppercase;
-  cursor: pointer;
-
-  &:hover {
-    border-color: ${({ active, theme }) => (active ? 'transparent' : theme.border)};
-    background: ${({ active, theme }) => (active ? theme.primary : theme.toggleBg)};
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.primary};
-    outline-offset: 2px;
-  }
+  letter-spacing: 0.04em;
+  color: ${({ theme }) => theme.mutedText};
 `;
 
-const MainContent = styled.div`
-  flex: 1;
-  margin-left: 280px;
-
-  @media (max-width: 968px) {
-    margin-left: 0;
-  }
-`;
-
-const MainPanel = styled.main`
-  padding: 2rem;
-  max-width: 1400px;
-  width: 100%;
-  margin: 0 auto;
-
-  @media (max-width: 768px) {
-    padding: 1rem;
-  }
-`;
-
-const PanelHeader = styled.div`
-  margin-bottom: 1.25rem;
-`;
-
-const PanelTitle = styled.h1`
-  font-size: 2rem;
+const KpiValue = styled.span`
+  font-size: 1.3rem;
   font-weight: 900;
   color: ${({ theme }) => theme.text};
-  text-transform: capitalize;
-  position: relative;
-  padding-bottom: 0.5rem;
-  margin-top: 0;
-  
-  &::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    bottom: 0;
-    width: 60px;
-    height: 3px;
-    background: ${({ theme }) => theme.primary};
-    border-radius: 0;
-  }
+  font-variant-numeric: tabular-nums;
 `;
 
-type Props = { params: { tripId: string } };
+const KpiSub = styled.span`
+  font-size: 0.75rem;
+  color: ${({ theme }) => theme.mutedText};
+`;
 
-export default function TripDetailPage({ params }: Props) {
-  const { user, isLoading } = useAuth();
-  const [trip, setTrip] = useState<TripRead | null>(null);
-  const [activeSection, setActiveSection] = useState<
-    'members' | 'itinerary' | 'expenses' | 'settlements' | 'share' | 'details'
-  >('members');
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [itinerary, setItinerary] = useState<ItineraryItemRead[]>([]);
-  const [expenses, setExpenses] = useState<MockExpense[]>([]);
-  const [balances, setBalances] = useState<BalanceEntry[]>([]);
-  const [linkInfo, setLinkInfo] = useState<TripLinkInfo | null>(null);
-  const [frontendAccessLink, setFrontendAccessLink] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+const CompactRowItem = styled.div`
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  background: ${({ theme }) => theme.background};
+  border: 1px solid ${({ theme }) => theme.border};
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+`;
 
-  const sections = useMemo(
-    () => (['members', 'details', 'itinerary', 'expenses', 'settlements', 'share'] as const),
-    []
+const ShareInput = styled.input`
+  flex: 1;
+  min-width: 240px;
+  padding: 0.65rem 0.85rem;
+  border-radius: 9px;
+  border: 1px solid ${({ theme }) => theme.border};
+  background: ${({ theme }) => theme.background};
+  color: ${({ theme }) => theme.text};
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.84rem;
+`;
+
+type Section =
+  | 'overview'
+  | 'expenses'
+  | 'settlements'
+  | 'itinerary'
+  | 'details'
+  | 'members'
+  | 'share';
+
+const DEMO_TRIP: TripRead = {
+  id: 'demo',
+  name: '🌴 Goa Beach Getaway (Demo)',
+  description: 'Interactive sandbox with sample spend, settlements, and itinerary.',
+  members: [
+    { member_id: 'm1', display_name: 'Aarav', linked: true },
+    { member_id: 'm2', display_name: 'Priya', linked: true },
+    { member_id: 'm3', display_name: 'Rohan', linked: false },
+    { member_id: 'm4', display_name: 'Meera', linked: false },
+  ],
+  secret_access_url: null,
+};
+
+const DEMO_EXPENSES: ExpenseRead[] = [
+  {
+    id: 'e1',
+    description: 'Beachfront Villa Booking (3 Nights)',
+    amount: 24000,
+    category: 'Lodging',
+    date: '2026-10-24',
+    paid_by_member_id: 'm1',
+    split_with_member_ids: ['m1', 'm2', 'm3', 'm4'],
+    custom_splits: null,
+  },
+  {
+    id: 'e2',
+    description: 'Seafood Dinner at Thalassa',
+    amount: 6400,
+    category: 'Food & Drinks',
+    date: '2026-10-24',
+    paid_by_member_id: 'm2',
+    split_with_member_ids: ['m1', 'm2', 'm3', 'm4'],
+    custom_splits: null,
+  },
+  {
+    id: 'e3',
+    description: 'Scooter Rentals & Fuel',
+    amount: 3200,
+    category: 'Transport',
+    date: '2026-10-25',
+    paid_by_member_id: 'm3',
+    split_with_member_ids: ['m1', 'm2', 'm3', 'm4'],
+    custom_splits: null,
+  },
+  {
+    id: 'e4',
+    description: 'Scuba Diving & Water Sports Package',
+    amount: 8800,
+    category: 'Activities',
+    date: '2026-10-25',
+    paid_by_member_id: 'm1',
+    split_with_member_ids: ['m1', 'm2', 'm3', 'm4'],
+    custom_splits: null,
+  },
+  {
+    id: 'e5',
+    description: 'Snacks, Drinks & Beach Supplies',
+    amount: 1600,
+    category: 'Groceries',
+    date: '2026-10-25',
+    paid_by_member_id: 'm4',
+    split_with_member_ids: ['m1', 'm2', 'm3', 'm4'],
+    custom_splits: null,
+  },
+];
+
+const DEMO_SETTLEMENTS: SettlementRead[] = [
+  {
+    id: 's1',
+    payer_member_id: 'm4',
+    payee_member_id: 'm1',
+    amount: 4000,
+    mode: 'upi',
+    created_at: '2026-10-25T15:30:00Z',
+  },
+];
+
+const DEMO_ITINERARY: ItineraryItemRead[] = [
+  {
+    id: 'i1',
+    title: 'Arrive at Mopa Airport & Rent Scooters',
+    item_type: 'transport',
+    start_time: '2026-10-24T11:00:00Z',
+    end_time: '2026-10-24T12:30:00Z',
+    location: 'Manohar International Airport, Goa',
+    notes: 'Pickup 2 Activas + 2 Fascinos near Exit Gate 2',
+    day_index: 1,
+    all_day: false,
+  },
+  {
+    id: 'i2',
+    title: 'Check-in at Anjuna Beach Villa',
+    item_type: 'lodging',
+    start_time: '2026-10-24T14:00:00Z',
+    end_time: '2026-10-24T15:00:00Z',
+    location: 'Anjuna, North Goa',
+    notes: 'Door passcode: 4829#',
+    day_index: 1,
+    all_day: false,
+  },
+  {
+    id: 'i3',
+    title: 'Sunset Dinner at Thalassa',
+    item_type: 'food',
+    start_time: '2026-10-24T18:30:00Z',
+    end_time: '2026-10-24T21:30:00Z',
+    location: 'Siolim, Goa',
+    notes: 'Table reserved under Priya (4 guests)',
+    day_index: 1,
+    all_day: false,
+  },
+  {
+    id: 'i4',
+    title: 'Grand Island Scuba & Dolphin Cruise',
+    item_type: 'activity',
+    start_time: '2026-10-25T08:30:00Z',
+    end_time: '2026-10-25T14:30:00Z',
+    location: 'Sinquerim Boat Jetty',
+    notes: 'Carry swimwear, sunscreen & GoPro',
+    day_index: 2,
+    all_day: false,
+  },
+];
+
+function computeDemoBalances(
+  members: TripRead['members'],
+  expenses: ExpenseRead[],
+  settlements: SettlementRead[]
+): BalanceEntry[] {
+  const net = new Map<string, number>();
+  members.forEach((m) => net.set(m.member_id, 0));
+
+  for (const exp of expenses) {
+    const amount = Number(exp.amount || 0);
+    const payer = exp.paid_by_member_id;
+    if (!payer || !Number.isFinite(amount)) continue;
+    net.set(payer, (net.get(payer) ?? 0) + amount);
+    if (exp.custom_splits && exp.custom_splits.length > 0) {
+      for (const cs of exp.custom_splits) {
+        net.set(cs.member_id, (net.get(cs.member_id) ?? 0) - Number(cs.amount || 0));
+      }
+    } else {
+      const ids = exp.split_with_member_ids ?? [];
+      const splitCount = ids.length || 1;
+      const share = amount / splitCount;
+      for (const mid of ids) {
+        net.set(mid, (net.get(mid) ?? 0) - share);
+      }
+    }
+  }
+
+  for (const s of settlements) {
+    net.set(s.payer_member_id, (net.get(s.payer_member_id) ?? 0) + s.amount);
+    net.set(s.payee_member_id, (net.get(s.payee_member_id) ?? 0) - s.amount);
+  }
+
+  return members.map((m) => ({
+    member_id: m.member_id,
+    display_name: m.display_name,
+    balance: Math.round((net.get(m.member_id) ?? 0) * 100) / 100,
+  }));
+}
+
+function frontendShareUrl(secret?: string | null): string {
+  if (!secret || typeof window === 'undefined') return '';
+  const token = secret.split('/').filter(Boolean).pop()?.split('?')[0] || '';
+  if (!token) return '';
+  if (token === 'demo-share') return `${window.location.origin}/tripsync/demo`;
+  return `${window.location.origin}/tripsync/access?t=${encodeURIComponent(token)}`;
+}
+
+export default function TripDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tripId = String(params?.tripId ?? '');
+  const isDemo = tripId === 'demo';
+
+  const initialTab = (searchParams?.get('tab') as Section) || 'overview';
+  const [activeSection, setActiveSection] = useState<Section>(
+    [
+      'overview',
+      'expenses',
+      'settlements',
+      'itinerary',
+      'details',
+      'members',
+      'share',
+    ].includes(initialTab)
+      ? initialTab
+      : 'overview'
   );
 
-  // Close menu on Escape and lock scroll while open (mobile).
+  const [trip, setTrip] = useState<TripRead | null>(null);
+  const [expenses, setExpenses] = useState<ExpenseRead[]>([]);
+  const [balances, setBalances] = useState<BalanceEntry[] | null>(null);
+  const [settlements, setSettlements] = useState<SettlementRead[]>([]);
+  const [itinerary, setItinerary] = useState<ItineraryItemRead[]>([]);
+  const [tripDoc, setTripDoc] = useState<TripDoc | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Share link UI state
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [shareStatus, setShareStatus] = useState<{
+    text: string;
+    tone: 'success' | 'error';
+  } | null>(null);
+  const [confirmRevoke, setConfirmRevoke] = useState(false);
+  const [expiryInput, setExpiryInput] = useState('');
+  const [linkInfo, setLinkInfo] = useState<TripLinkInfo | null>(null);
+  const seededTripId = useRef<string | null>(null);
+
   useEffect(() => {
-    if (!mobileMenuOpen) return;
+    const tabParam = searchParams?.get('tab') as Section | null;
+    if (
+      tabParam &&
+      [
+        'overview',
+        'expenses',
+        'settlements',
+        'itinerary',
+        'details',
+        'members',
+        'share',
+      ].includes(tabParam)
+    ) {
+      setActiveSection(tabParam);
+    }
+  }, [searchParams]);
 
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMobileMenuOpen(false);
-    };
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    window.addEventListener('keydown', onKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener('keydown', onKeyDown);
-    };
-  }, [mobileMenuOpen]);
-
-  useEffect(() => {
-    if (isLoading) return;
-    if (!user) return;
-    const run = async () => {
-      try {
-        const t = await api.getTrip(params.tripId);
-        setTrip(t);
-        const items = await api.listItinerary(params.tripId);
-        setItinerary(items);
-        const expensesList = await api.listExpenses(params.tripId);
-        // Map ExpenseRead to MockExpense by adding missing UI fields.
-        // Prefer backend timestamps when present; otherwise fallback to "now".
-        const mappedExpenses: MockExpense[] = expensesList.map((exp) => {
-          const expAny = exp as unknown as { created_at?: string; date?: string; category?: string };
-          return {
-            ...exp,
-            date: expAny.date || expAny.created_at || new Date().toISOString(),
-            category: expAny.category || 'Other',
-          };
+  const loadTripData = useCallback(async () => {
+    if (isDemo) {
+      if (seededTripId.current !== tripId) {
+        seededTripId.current = tripId;
+        setTrip(DEMO_TRIP);
+        setExpenses(DEMO_EXPENSES);
+        setSettlements(DEMO_SETTLEMENTS);
+        setItinerary(DEMO_ITINERARY);
+        setBalances(
+          computeDemoBalances(DEMO_TRIP.members, DEMO_EXPENSES, DEMO_SETTLEMENTS)
+        );
+        setLinkInfo({
+          secret_access_url: '/api/tripsync/access/demo-share',
+          link_revoked: false,
+          link_expires_at: null,
+          access_token_version: 1,
         });
-        setExpenses(mappedExpenses);
-        const b = await api.getBalances(params.tripId);
-        setBalances(b);
-        
-        // Fetch link info
-        try {
-          const link = await api.getLink(params.tripId);
-          setLinkInfo(link);
-        } catch (e) {
-          console.error('Failed to fetch link info:', e);
-          // Link info might not be available if user is not a linked member
-        }
-      } catch (e) {
-        console.error('API Error, falling back to mock data:', e);
-        // Fallback to mock data if API fails
-        setTrip(mockTrip);
-        setItinerary([]);
-        setExpenses(mockExpenses);
-        setBalances(mockBalances);
-      } finally {
-        setLoading(false);
       }
-    };
-    run();
-  }, [params.tripId, user, isLoading]);
-
-  // Derive the frontend share link only on the client to avoid leaking tokens in SSR HTML.
-  useEffect(() => {
-    if (!linkInfo?.secret_access_url) {
-      setFrontendAccessLink(null);
+      setLoading(false);
       return;
     }
-    setFrontendAccessLink(buildFrontendAccessLink(linkInfo.secret_access_url));
-  }, [linkInfo]);
 
-  const handleTripUpdate = (updatedTrip: TripRead) => {
-    setTrip(updatedTrip);
-  };
-
-  const handleItineraryRefresh = async () => {
     try {
-      const items = await api.listItinerary(params.tripId);
-      setItinerary(items);
-    } catch (e) {
-      console.error('Failed to refresh itinerary:', e);
+      setLoading(true);
+      setErrorMsg(null);
+      const [
+        tripData,
+        expensesData,
+        balancesData,
+        itineraryData,
+        settlementsData,
+        docData,
+      ] = await Promise.all([
+        api.getTrip(tripId),
+        api.listExpenses(tripId),
+        api.getBalances(tripId),
+        api.listItinerary(tripId),
+        api.listSettlements(tripId),
+        api.getTripDoc(tripId).catch(() => null),
+      ]);
+      setTrip(tripData);
+      setExpenses(expensesData);
+      setBalances(
+        balancesData.map((entry) => ({
+          ...entry,
+          display_name:
+            tripData.members.find((m) => m.member_id === entry.member_id)
+              ?.display_name || entry.display_name,
+        }))
+      );
+      setItinerary(itineraryData);
+      setSettlements(settlementsData);
+      if (docData) setTripDoc(docData);
+      const link = await api.getLink(tripId).catch(() => null);
+      if (link) {
+        setLinkInfo(link);
+      } else if (tripData.secret_access_url) {
+        setLinkInfo({
+          secret_access_url: tripData.secret_access_url,
+          link_revoked: false,
+          link_expires_at: null,
+          access_token_version: 1,
+        });
+      }
+    } catch (error) {
+      setErrorMsg(
+        error instanceof Error ? error.message : 'Failed to load trip data.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [tripId, isDemo]);
+
+  useEffect(() => {
+    if (tripId) {
+      void loadTripData();
+    }
+  }, [tripId, loadTripData]);
+
+  const analytics = useMemo(
+    () => computeExpenseAnalytics(expenses, trip?.members ?? [], balances),
+    [expenses, trip?.members, balances]
+  );
+
+  const pendingSettlements = useMemo(
+    () => calculateOptimalSettlements(balances ?? []),
+    [balances]
+  );
+
+  const shareUrl = useMemo(
+    () => frontendShareUrl(linkInfo?.secret_access_url),
+    [linkInfo?.secret_access_url]
+  );
+  const linkActive = Boolean(linkInfo && !linkInfo.link_revoked && shareUrl);
+
+  const handleCopyShareLink = async () => {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2200);
+    } catch {
+      setShareStatus({ text: 'Could not copy link automatically.', tone: 'error' });
     }
   };
 
-  const handleExpensesUpdate = async () => {
-    try {
-      const expensesList = await api.listExpenses(params.tripId);
-      // Map ExpenseRead to MockExpense by adding missing UI fields.
-      // Prefer backend timestamps when present; otherwise fallback to "now".
-      const mappedExpenses: MockExpense[] = expensesList.map((exp) => {
-        const expAny = exp as unknown as { created_at?: string; date?: string; category?: string };
-        return {
-          ...exp,
-          date: expAny.date || expAny.created_at || new Date().toISOString(),
-          category: expAny.category || 'Other',
-        };
+  const handleRotateLink = async () => {
+    if (!trip || isDemo) {
+      setShareStatus({
+        text: 'Demo links stay on this sandbox. Sign in to rotate a real trip link.',
+        tone: 'success',
       });
-      setExpenses(mappedExpenses);
-      const b = await api.getBalances(params.tripId);
-      setBalances(b);
+      return;
+    }
+    try {
+      const rotated = await api.rotateLink(trip.id);
+      setLinkInfo((prev) => ({
+        secret_access_url: rotated.secret_access_url,
+        link_revoked: false,
+        link_expires_at: prev?.link_expires_at ?? null,
+        access_token_version: (prev?.access_token_version ?? 0) + 1,
+      }));
+      setTrip((prev) =>
+        prev ? { ...prev, secret_access_url: rotated.secret_access_url } : prev
+      );
+      setShareStatus({
+        text: 'Share link rotated. The previous link no longer works.',
+        tone: 'success',
+      });
     } catch (e) {
-      console.error('Failed to refresh expenses:', e);
-      // Keep using current data on error
+      setShareStatus({
+        text: e instanceof Error ? e.message : 'Failed to rotate link.',
+        tone: 'error',
+      });
     }
   };
 
-  if (isLoading) return <div>Loading...</div>;
-  if (!user) return <div>Unauthorized</div>;
+  const handleRevokeLink = async () => {
+    if (!trip || isDemo) return;
+    try {
+      await api.revokeLink(trip.id);
+      setLinkInfo((prev) =>
+        prev
+          ? { ...prev, link_revoked: true, secret_access_url: '' }
+          : {
+              secret_access_url: '',
+              link_revoked: true,
+              link_expires_at: null,
+              access_token_version: 1,
+            }
+      );
+      setTrip((prev) => (prev ? { ...prev, secret_access_url: null } : prev));
+      setConfirmRevoke(false);
+      setShareStatus({ text: 'Share link revoked.', tone: 'success' });
+    } catch (e) {
+      setShareStatus({
+        text: e instanceof Error ? e.message : 'Failed to revoke link.',
+        tone: 'error',
+      });
+    }
+  };
+
+  const handleSetExpiry = async (expiresAtIso: string | null) => {
+    if (!trip || isDemo) return;
+    try {
+      await api.updateLinkExpiry(trip.id, { link_expires_at: expiresAtIso });
+      setLinkInfo((prev) =>
+        prev
+          ? { ...prev, link_expires_at: expiresAtIso }
+          : {
+              secret_access_url: trip.secret_access_url || '',
+              link_revoked: false,
+              link_expires_at: expiresAtIso,
+              access_token_version: 1,
+            }
+      );
+      setShareStatus({
+        text: expiresAtIso
+          ? `Link expiry set to ${new Date(expiresAtIso).toLocaleString()}`
+          : 'Link set to never expire.',
+        tone: 'success',
+      });
+    } catch (e) {
+      setShareStatus({
+        text: e instanceof Error ? e.message : 'Failed to update link expiry.',
+        tone: 'error',
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <PageWrapper>
+        <Navbar />
+        <WorkspaceShell>
+          <PanelCard>Loading TripSync workspace…</PanelCard>
+        </WorkspaceShell>
+      </PageWrapper>
+    );
+  }
+
+  if (!trip) {
+    return (
+      <PageWrapper>
+        <Navbar />
+        <WorkspaceShell>
+          <PanelCard>
+            <h2 style={{ margin: 0 }}>Could not open trip</h2>
+            <p style={{ margin: 0, opacity: 0.8 }}>
+              {errorMsg || 'Trip not found or you need to sign in.'}
+            </p>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <ActionBtn
+                type="button"
+                variant="primary"
+                onClick={() => router.push(`/login?next=/tripsync/${tripId}`)}
+              >
+                Sign In
+              </ActionBtn>
+              <ActionBtn type="button" onClick={() => void loadTripData()}>
+                Retry
+              </ActionBtn>
+              <ActionBtn
+                type="button"
+                onClick={() => router.push('/tripsync/demo')}
+              >
+                Open Demo Trip Instead
+              </ActionBtn>
+            </div>
+          </PanelCard>
+        </WorkspaceShell>
+      </PageWrapper>
+    );
+  }
+
+  const memberNameMap = new Map(
+    trip.members.map((m) => [m.member_id, m.display_name])
+  );
 
   return (
     <PageWrapper>
-      {/* Navbar spans full width */}
       <Navbar />
-
-      {/* Content wrapper with sidebar and main content */}
-      <ContentWrapper>
-        {/* Sidebar starts below navbar */}
-        <Sidebar>
-          <SidebarContent>
-            <TripInfo>
-              <TripTitleRow>
-                <TripTitle>{trip?.name || 'Trip'}</TripTitle>
-                <TripMenuButton
-                  type="button"
-                  aria-label={mobileMenuOpen ? 'Close trip menu' : 'Open trip menu'}
-                  aria-expanded={mobileMenuOpen}
-                  aria-controls="trip-mobile-menu"
-                  onClick={() => setMobileMenuOpen((v) => !v)}
-                >
-                  {mobileMenuOpen ? '✕' : '☰'}
-                </TripMenuButton>
-              </TripTitleRow>
-              {trip?.description && <TripDescription>{trip.description}</TripDescription>}
-              <TripMeta>
-                <span>👥</span>
-                <span>{trip?.members.length || 0} member{trip?.members.length !== 1 ? 's' : ''}</span>
-              </TripMeta>
-            </TripInfo>
-
-            <NavSection>
-              {sections.map((section) => (
-                <NavButton
-                  key={section}
-                  active={activeSection === section}
-                  onClick={() => setActiveSection(section)}
-                >
-                  {section}
-                </NavButton>
-              ))}
-            </NavSection>
-          </SidebarContent>
-        </Sidebar>
-
-        <MobileOverlay open={mobileMenuOpen} aria-hidden={!mobileMenuOpen} onClick={() => setMobileMenuOpen(false)} />
-        {mobileMenuOpen && (
-          <MobileMenu id="trip-mobile-menu" role="dialog" aria-modal="true" aria-label="Trip sections">
-            {sections.map((section) => (
-              <MobileMenuItem
-                key={section}
-                type="button"
-                active={activeSection === section}
-                onClick={() => {
-                  setActiveSection(section);
-                  setMobileMenuOpen(false);
-                }}
+      <WorkspaceShell>
+        {/* Top Command Header */}
+        <CommandBar>
+          <CommandTopRow>
+            <TitleArea>
+              <BackBtn type="button" onClick={() => router.push('/tripsync')}>
+                ← All Trips
+              </BackBtn>
+              <TripTitle>{trip.name}</TripTitle>
+              {isDemo && <MetaPill tone="primary">Interactive Sandbox</MetaPill>}
+              <MetaPill>{trip.members.length} Travelers</MetaPill>
+              <MetaPill tone="primary">
+                Total: {formatCurrency(analytics.totalAmount)}
+              </MetaPill>
+              <MetaPill
+                tone={pendingSettlements.length === 0 ? 'success' : 'warning'}
               >
-                {section}
-              </MobileMenuItem>
-            ))}
-          </MobileMenu>
+                {pendingSettlements.length === 0
+                  ? '✓ All Settled'
+                  : `${pendingSettlements.length} Settlement${
+                      pendingSettlements.length === 1 ? '' : 's'
+                    } Due`}
+              </MetaPill>
+            </TitleArea>
+
+            <QuickActionsRow>
+              <ActionBtn
+                type="button"
+                variant="primary"
+                onClick={() => setActiveSection('expenses')}
+              >
+                + Add Expense
+              </ActionBtn>
+              <ActionBtn
+                type="button"
+                onClick={() => setActiveSection('settlements')}
+              >
+                🤝 Settle Up
+              </ActionBtn>
+              <ActionBtn
+                type="button"
+                onClick={() => setActiveSection('itinerary')}
+              >
+                + Activity
+              </ActionBtn>
+              {shareUrl && (
+                <ActionBtn
+                  type="button"
+                  variant={copiedLink ? 'success' : 'ghost'}
+                  onClick={() => void handleCopyShareLink()}
+                >
+                  {copiedLink ? '✓ Link Copied!' : '🔗 Copy Share Link'}
+                </ActionBtn>
+              )}
+            </QuickActionsRow>
+          </CommandTopRow>
+
+          {/* 1-Click Navigation Bar */}
+          <TabsRow>
+            <TabButton
+              type="button"
+              active={activeSection === 'overview'}
+              onClick={() => setActiveSection('overview')}
+            >
+              📊 Overview
+            </TabButton>
+            <TabButton
+              type="button"
+              active={activeSection === 'expenses'}
+              onClick={() => setActiveSection('expenses')}
+            >
+              💸 Expenses
+              <TabCount active={activeSection === 'expenses'}>
+                {expenses.length}
+              </TabCount>
+            </TabButton>
+            <TabButton
+              type="button"
+              active={activeSection === 'settlements'}
+              onClick={() => setActiveSection('settlements')}
+            >
+              🤝 Settlements
+              <TabCount active={activeSection === 'settlements'}>
+                {pendingSettlements.length}
+              </TabCount>
+            </TabButton>
+            <TabButton
+              type="button"
+              active={activeSection === 'itinerary'}
+              onClick={() => setActiveSection('itinerary')}
+            >
+              🗓️ Itinerary
+              <TabCount active={activeSection === 'itinerary'}>
+                {itinerary.length}
+              </TabCount>
+            </TabButton>
+            <TabButton
+              type="button"
+              active={activeSection === 'details'}
+              onClick={() => setActiveSection('details')}
+            >
+              🗺️ Brief & Stays
+            </TabButton>
+            <TabButton
+              type="button"
+              active={activeSection === 'members'}
+              onClick={() => setActiveSection('members')}
+            >
+              👥 Travelers
+              <TabCount active={activeSection === 'members'}>
+                {trip.members.length}
+              </TabCount>
+            </TabButton>
+            <TabButton
+              type="button"
+              active={activeSection === 'share'}
+              onClick={() => setActiveSection('share')}
+            >
+              🔗 Share & Access
+            </TabButton>
+          </TabsRow>
+        </CommandBar>
+
+        {/* SECTION: OVERVIEW COCKPIT */}
+        {activeSection === 'overview' && (
+          <>
+            <KpiStrip>
+              <KpiBox onClick={() => setActiveSection('expenses')}>
+                <KpiLabel>Total Trip Spend</KpiLabel>
+                <KpiValue>{formatCurrency(analytics.totalAmount)}</KpiValue>
+                <KpiSub>
+                  {expenses.length} expense{expenses.length === 1 ? '' : 's'} • Avg{' '}
+                  {formatCurrency(analytics.averagePerPerson)}/person
+                </KpiSub>
+              </KpiBox>
+
+              <KpiBox onClick={() => setActiveSection('settlements')}>
+                <KpiLabel>Settlement Status</KpiLabel>
+                <KpiValue
+                  style={{
+                    color:
+                      pendingSettlements.length === 0 ? '#10B981' : '#F59E0B',
+                  }}
+                >
+                  {pendingSettlements.length === 0
+                    ? '✓ All Clear'
+                    : `${pendingSettlements.length} Pending`}
+                </KpiValue>
+                <KpiSub>
+                  {settlements.length} payment
+                  {settlements.length === 1 ? '' : 's'} recorded
+                </KpiSub>
+              </KpiBox>
+
+              <KpiBox onClick={() => setActiveSection('itinerary')}>
+                <KpiLabel>Itinerary Schedule</KpiLabel>
+                <KpiValue>{itinerary.length} Items</KpiValue>
+                <KpiSub>
+                  {itinerary[0]
+                    ? `Next: ${itinerary[0].title}`
+                    : 'Click to add activities'}
+                </KpiSub>
+              </KpiBox>
+
+              <KpiBox onClick={() => setActiveSection('members')}>
+                <KpiLabel>Travelers</KpiLabel>
+                <KpiValue>{trip.members.length} Members</KpiValue>
+                <KpiSub>
+                  {trip.members.map((m) => m.display_name).join(', ')}
+                </KpiSub>
+              </KpiBox>
+            </KpiStrip>
+
+            <OverviewGrid>
+              {/* Left Column: Recent Expenses + Upcoming Itinerary */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <PanelCard>
+                  <PanelHeader>
+                    <PanelTitle>💸 Recent Expenses</PanelTitle>
+                    <ActionBtn
+                      type="button"
+                      variant="primary"
+                      onClick={() => setActiveSection('expenses')}
+                    >
+                      Open Expense Manager →
+                    </ActionBtn>
+                  </PanelHeader>
+
+                  {expenses.length === 0 ? (
+                    <div style={{ fontSize: '0.85rem', opacity: 0.7 }}>
+                      No expenses logged yet.
+                    </div>
+                  ) : (
+                    expenses.slice(0, 5).map((e) => {
+                      const cat = getCategoryMeta(e.category);
+                      return (
+                        <CompactRowItem key={e.id}>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>
+                              {cat.emoji} {e.description}
+                            </div>
+                            <div style={{ fontSize: '0.76rem', opacity: 0.75 }}>
+                              Paid by{' '}
+                              <strong>
+                                {memberNameMap.get(e.paid_by_member_id || '') || 'Unknown'}
+                              </strong>{' '}
+                              • Split {(e.split_with_member_ids ?? []).length} ways
+                            </div>
+                          </div>
+                          <strong style={{ fontSize: '0.95rem' }}>
+                            {formatCurrency(Number(e.amount || 0))}
+                          </strong>
+                        </CompactRowItem>
+                      );
+                    })
+                  )}
+                </PanelCard>
+
+                <PanelCard>
+                  <PanelHeader>
+                    <PanelTitle>🗓️ Upcoming Itinerary</PanelTitle>
+                    <ActionBtn
+                      type="button"
+                      onClick={() => setActiveSection('itinerary')}
+                    >
+                      Manage Schedule →
+                    </ActionBtn>
+                  </PanelHeader>
+
+                  {itinerary.length === 0 ? (
+                    <div style={{ fontSize: '0.85rem', opacity: 0.7 }}>
+                      No itinerary items scheduled yet.
+                    </div>
+                  ) : (
+                    itinerary.slice(0, 4).map((item) => (
+                      <CompactRowItem key={item.id}>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>
+                            {item.title}
+                          </div>
+                          <div style={{ fontSize: '0.76rem', opacity: 0.75 }}>
+                            {item.location ? `📍 ${item.location} • ` : ''}
+                            {item.day_index ? `Day ${item.day_index}` : item.item_type}
+                          </div>
+                        </div>
+                        <MetaPill>{item.item_type}</MetaPill>
+                      </CompactRowItem>
+                    ))
+                  )}
+                </PanelCard>
+              </div>
+
+              {/* Right Column: Who Owes Whom + Member Balances */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <PanelCard>
+                  <PanelHeader>
+                    <PanelTitle>🤝 Who Owes Whom (Smart Settle)</PanelTitle>
+                    <ActionBtn
+                      type="button"
+                      variant="primary"
+                      onClick={() => setActiveSection('settlements')}
+                    >
+                      Settle Balances →
+                    </ActionBtn>
+                  </PanelHeader>
+
+                  {pendingSettlements.length === 0 ? (
+                    <div
+                      style={{
+                        padding: '0.85rem',
+                        borderRadius: '10px',
+                        background: '#10B98115',
+                        color: '#10B981',
+                        fontWeight: 700,
+                        fontSize: '0.86rem',
+                        textAlign: 'center',
+                      }}
+                    >
+                      🎉 Everyone is settled up!
+                    </div>
+                  ) : (
+                    pendingSettlements.map((s, idx) => (
+                      <CompactRowItem key={idx}>
+                        <div style={{ fontSize: '0.88rem' }}>
+                          <strong style={{ color: '#EF4444' }}>{s.fromName}</strong>{' '}
+                          pays{' '}
+                          <strong style={{ color: '#10B981' }}>{s.toName}</strong>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <strong style={{ fontSize: '0.95rem' }}>
+                            {formatCurrency(s.amount)}
+                          </strong>
+                          <ActionBtn
+                            type="button"
+                            variant="primary"
+                            onClick={() => setActiveSection('settlements')}
+                            style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}
+                          >
+                            Settle
+                          </ActionBtn>
+                        </div>
+                      </CompactRowItem>
+                    ))
+                  )}
+                </PanelCard>
+
+                <PanelCard>
+                  <PanelHeader>
+                    <PanelTitle>⚖️ Traveler Spending & Net Balances</PanelTitle>
+                    <ActionBtn
+                      type="button"
+                      onClick={() => setActiveSection('members')}
+                    >
+                      + Add Traveler
+                    </ActionBtn>
+                  </PanelHeader>
+
+                  {analytics.memberStats.map((m) => (
+                    <CompactRowItem key={m.memberId}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>
+                          {m.displayName}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', opacity: 0.75 }}>
+                          Paid {formatCurrency(m.totalPaid)} • Share{' '}
+                          {formatCurrency(m.totalShare)}
+                        </div>
+                      </div>
+                      <MetaPill
+                        tone={
+                          m.netBalance > 0.01
+                            ? 'success'
+                            : m.netBalance < -0.01
+                            ? 'warning'
+                            : undefined
+                        }
+                      >
+                        {Math.abs(m.netBalance) <= 0.01
+                          ? 'Settled'
+                          : m.netBalance > 0
+                          ? `Gets +${formatCurrency(m.netBalance)}`
+                          : `Owes -${formatCurrency(Math.abs(m.netBalance))}`}
+                      </MetaPill>
+                    </CompactRowItem>
+                  ))}
+                </PanelCard>
+              </div>
+            </OverviewGrid>
+          </>
         )}
 
-        {/* Main Content Area */}
-        <MainContent>
-          <MainPanel>
-          <PanelHeader>
-            <PanelTitle>{activeSection}</PanelTitle>
-          </PanelHeader>
+        {/* SECTION: EXPENSES OR SETTLEMENTS */}
+        {(activeSection === 'expenses' || activeSection === 'settlements') && (
+          <ExpensesSection
+            tripId={trip.id}
+            members={trip.members}
+            expenses={expenses}
+            balances={balances}
+            settlements={settlements}
+            focusSettlements={activeSection === 'settlements'}
+            onExpensesChange={(nextExpenses) => {
+              setExpenses(nextExpenses);
+              if (isDemo) {
+                setBalances(
+                  computeDemoBalances(trip.members, nextExpenses, settlements)
+                );
+              }
+            }}
+            onSettlementsChange={(nextSettlements) => {
+              setSettlements(nextSettlements);
+              if (isDemo) {
+                setBalances(
+                  computeDemoBalances(trip.members, expenses, nextSettlements)
+                );
+              }
+            }}
+            onUpdate={loadTripData}
+          />
+        )}
 
-          {loading ? (
-            <p>Loading...</p>
+        {/* SECTION: ITINERARY */}
+        {activeSection === 'itinerary' && (
+          <ItinerarySection
+            tripId={trip.id}
+            items={itinerary}
+            onItemsChange={setItinerary}
+            onRefresh={loadTripData}
+            docRevision={tripDoc?.revision ?? null}
+          />
+        )}
+
+        {/* SECTION: DETAILS & STAYS */}
+        {activeSection === 'details' &&
+          (isDemo ? (
+            <PanelCard>
+              <PanelHeader>
+                <PanelTitle>🗺️ Demo Trip Brief & Stays</PanelTitle>
+              </PanelHeader>
+              <p style={{ margin: 0, fontSize: '0.9rem', lineHeight: 1.55 }}>
+                <strong>Brief:</strong> 4-day North & South Goa getaway with beach
+                villa stay, scooter exploration, and Grand Island scuba diving.
+              </p>
+              <p style={{ margin: 0, fontSize: '0.9rem', lineHeight: 1.55 }}>
+                <strong>Stay:</strong> Anjuna Beachfront Villa (Check-in Oct 24 →
+                Check-out Oct 27 • 3 nights).
+              </p>
+            </PanelCard>
           ) : (
-            <div>
-              {activeSection === 'members' && trip && (
-                <MembersSection
-                  tripId={params.tripId}
-                  members={trip.members}
-                  onUpdate={handleTripUpdate}
-                />
-              )}
+            <TripDetailsSection
+              tripId={trip.id}
+              canEdit={true}
+              onDocLoaded={(d) => setTripDoc(d)}
+              onDocUpdated={(d) => {
+                setTripDoc(d);
+                if (d.title && d.title !== trip.name) {
+                  setTrip((prev) => (prev ? { ...prev, name: d.title } : prev));
+                }
+              }}
+              onNeedRefresh={loadTripData}
+            />
+          ))}
 
-              {activeSection === 'details' && (
-                <TripDetailsSection
-                  tripId={params.tripId}
-                  // Logged-in mode uses JWT; editing allowed.
-                  canEdit={true}
-                  onNeedRefresh={handleItineraryRefresh}
-                />
-              )}
+        {/* SECTION: MEMBERS */}
+        {activeSection === 'members' && (
+          <MembersSection
+            tripId={trip.id}
+            members={trip.members}
+            balances={balances ?? []}
+            onUpdate={(updatedTrip) => {
+              if (isDemo) {
+                setTrip((prev) =>
+                  prev ? { ...prev, members: updatedTrip.members } : updatedTrip
+                );
+                return;
+              }
+              setTrip(updatedTrip);
+              void loadTripData();
+            }}
+          />
+        )}
 
-              {activeSection === 'itinerary' && (
-                <ItinerarySection
-                  tripId={params.tripId}
-                  items={itinerary}
-                  onRefresh={handleItineraryRefresh}
-                />
-              )}
+        {/* SECTION: SHARE & SECURITY */}
+        {activeSection === 'share' && (
+          <PanelCard>
+            <PanelHeader>
+              <PanelTitle>🔗 Quick Share Link & Access Security</PanelTitle>
+              <MetaPill tone={linkActive ? 'success' : 'warning'}>
+                {linkActive ? '✓ Active Link' : 'Revoked'}
+              </MetaPill>
+            </PanelHeader>
 
-              {activeSection === 'expenses' && trip && (
-                <ExpensesSection
-                  tripId={params.tripId}
-                  members={trip.members}
-                  expenses={expenses}
-                  balances={balances}
-                  onUpdate={handleExpensesUpdate}
-                />
-              )}
+            <p style={{ margin: 0, fontSize: '0.88rem', opacity: 0.8 }}>
+              Share this link with fellow travelers so they can view balances, log
+              expenses, and check the itinerary without needing an account.
+            </p>
 
-              {activeSection === 'settlements' && (
-                <div>
-                  <p>Coming next: list/add/edit/delete settlements.</p>
+            {shareStatus && (
+              <div
+                style={{
+                  padding: '0.6rem 0.85rem',
+                  borderRadius: '9px',
+                  fontSize: '0.84rem',
+                  fontWeight: 600,
+                  background:
+                    shareStatus.tone === 'success' ? '#10B98118' : '#EF444418',
+                  color: shareStatus.tone === 'success' ? '#10B981' : '#EF4444',
+                  border: `1px solid ${
+                    shareStatus.tone === 'success' ? '#10B98155' : '#EF444455'
+                  }`,
+                }}
+              >
+                {shareStatus.text}
+              </div>
+            )}
+
+            {linkActive ? (
+              <>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '0.55rem',
+                    flexWrap: 'wrap',
+                    alignItems: 'center',
+                  }}
+                >
+                  <ShareInput type="text" readOnly value={shareUrl} />
+                  <ActionBtn
+                    type="button"
+                    variant={copiedLink ? 'success' : 'primary'}
+                    onClick={() => void handleCopyShareLink()}
+                  >
+                    {copiedLink ? '✓ Copied!' : '📋 Copy Share Link'}
+                  </ActionBtn>
                 </div>
-              )}
 
-              {activeSection === 'share' && (
-                <div>
-                  {linkInfo ? (
-                    <>
-                      <div style={{ marginBottom: '1.5rem' }}>
-                        <h3 style={{ marginBottom: '0.5rem', fontSize: '1rem', fontWeight: 600 }}>Access Link</h3>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--muted-text)', marginBottom: '0.75rem' }}>
-                          Share this frontend link. Anyone with it can edit the trip without logging in.
-                        </div>
-                        <div
-                          style={{
-                            padding: '1rem',
-                            background: 'var(--card-bg)',
-                            border: '1px solid var(--border)',
-                            borderRadius: '3px',
-                            wordBreak: 'break-all',
-                            fontFamily: 'monospace',
-                            fontSize: '0.85rem',
-                            marginBottom: '0.75rem',
-                          }}
-                        >
-                          {frontendAccessLink ?? 'Generating link…'}
-                        </div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--muted-text)', marginBottom: '1rem' }}>
-                          <div>Status: {linkInfo.link_revoked ? <span style={{ color: '#E74C3C' }}>Revoked</span> : <span style={{ color: '#27AE60' }}>Active</span>}</div>
-                          {linkInfo.link_expires_at && (
-                            <div>
-                              Expires: {new Date(linkInfo.link_expires_at).toLocaleString()}
-                            </div>
-                          )}
-                          <div>Version: {linkInfo.access_token_version}</div>
-                        </div>
-                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-                          <button
-                            onClick={async () => {
-                              try {
-                                if (!frontendAccessLink) throw new Error('Link not ready');
-                                await navigator.clipboard.writeText(frontendAccessLink);
-                                alert('Link copied!');
-                              } catch (error) {
-                                console.error('Failed to copy link:', error);
-                                alert('Failed to copy link. Please copy it manually.');
-                              }
-                            }}
-                            disabled={linkInfo.link_revoked || !frontendAccessLink}
-                            style={{
-                              padding: '0.6rem 1rem',
-                              borderRadius: '3px',
-                              border: '1px solid var(--border)',
-                              background: 'transparent',
-                              color: 'var(--text)',
-                              cursor: linkInfo.link_revoked || !frontendAccessLink ? 'not-allowed' : 'pointer',
-                              fontSize: '0.9rem',
-                              fontWeight: 600,
-                              opacity: linkInfo.link_revoked || !frontendAccessLink ? 0.6 : 1,
-                            }}
-                          >
-                            Copy Link
-                          </button>
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        <button
-                          onClick={async () => {
-                            try {
-                              const result = await api.rotateLink(params.tripId);
-                              // Refresh link info
-                              const link = await api.getLink(params.tripId);
-                              setLinkInfo(link);
-                              const t = await api.getTrip(params.tripId);
-                              setTrip(t);
-                              alert('Link rotated successfully!');
-                            } catch (error) {
-                              console.error('Failed to rotate link:', error);
-                              alert('Failed to rotate link. Please try again.');
+                {/* Expiry Management */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '0.75rem',
+                    flexWrap: 'wrap',
+                    paddingTop: '0.65rem',
+                    borderTop: '1px solid rgba(148,163,184,0.2)',
+                  }}
+                >
+                  <div style={{ fontSize: '0.84rem' }}>
+                    <strong>Link Expiration:</strong>{' '}
+                    {linkInfo?.link_expires_at
+                      ? new Date(linkInfo.link_expires_at).toLocaleString()
+                      : 'Never expires'}
+                  </div>
+
+                  {!isDemo && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: '0.4rem',
+                        flexWrap: 'wrap',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <ActionBtn
+                        type="button"
+                        onClick={() => void handleSetExpiry(null)}
+                      >
+                        Never Expire
+                      </ActionBtn>
+                      <ActionBtn
+                        type="button"
+                        onClick={() => {
+                          const d = new Date(Date.now() + 24 * 3600 * 1000);
+                          void handleSetExpiry(d.toISOString());
+                        }}
+                      >
+                        24h
+                      </ActionBtn>
+                      <ActionBtn
+                        type="button"
+                        onClick={() => {
+                          const d = new Date(Date.now() + 7 * 24 * 3600 * 1000);
+                          void handleSetExpiry(d.toISOString());
+                        }}
+                      >
+                        7 Days
+                      </ActionBtn>
+                      <input
+                        type="datetime-local"
+                        value={expiryInput}
+                        onChange={(e) => setExpiryInput(e.target.value)}
+                        style={{
+                          padding: '0.38rem 0.6rem',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(148,163,184,0.35)',
+                          background: 'transparent',
+                          color: 'inherit',
+                          fontSize: '0.8rem',
+                        }}
+                      />
+                      {expiryInput && (
+                        <ActionBtn
+                          type="button"
+                          variant="primary"
+                          onClick={() => {
+                            const d = new Date(expiryInput);
+                            if (!Number.isNaN(d.getTime())) {
+                              void handleSetExpiry(d.toISOString());
                             }
                           }}
-                          disabled={linkInfo.link_revoked}
-                          style={{
-                            padding: '0.6rem 1rem',
-                            borderRadius: '3px',
-                            border: 'none',
-                            background: 'var(--primary)',
-                            color: 'white',
-                            cursor: 'pointer',
-                            fontSize: '0.9rem',
-                            fontWeight: 600,
-                          }}
                         >
-                          Rotate Link
-                        </button>
-                        <button
-                          onClick={async () => {
-                            if (confirm('Are you sure you want to revoke this link? It will no longer be accessible.')) {
-                              try {
-                                await api.revokeLink(params.tripId);
-                                // Refresh link info
-                                const link = await api.getLink(params.tripId);
-                                setLinkInfo(link);
-                                const t = await api.getTrip(params.tripId);
-                                setTrip(t);
-                                alert('Link revoked successfully!');
-                              } catch (error) {
-                                console.error('Failed to revoke link:', error);
-                                alert('Failed to revoke link. Please try again.');
-                              }
-                            }
-                          }}
-                          style={{
-                            padding: '0.6rem 1rem',
-                            borderRadius: '3px',
-                            border: '1px solid var(--border)',
-                            background: linkInfo.link_revoked ? 'transparent' : '#E74C3C',
-                            color: linkInfo.link_revoked ? 'var(--text)' : 'white',
-                            cursor: 'pointer',
-                            fontSize: '0.9rem',
-                            fontWeight: 600,
-                            opacity: linkInfo.link_revoked ? 0.6 : 1,
-                          }}
-                        >
-                          {linkInfo.link_revoked ? 'Link Revoked' : 'Revoke Link'}
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <div>
-                      <p>Link information not available. You may need to be a linked member to manage access links.</p>
+                          Set Expiry
+                        </ActionBtn>
+                      )}
                     </div>
                   )}
                 </div>
-              )}
-            </div>
-          )}
-          </MainPanel>
-        </MainContent>
-      </ContentWrapper>
+
+                {/* Security Controls: Rotate & Revoke */}
+                {!isDemo && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: '0.55rem',
+                      paddingTop: '0.65rem',
+                      borderTop: '1px solid rgba(148,163,184,0.2)',
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <ActionBtn
+                      type="button"
+                      onClick={() => void handleRotateLink()}
+                    >
+                      🔄 Rotate Token (Invalidate Old Link)
+                    </ActionBtn>
+                    {confirmRevoke ? (
+                      <>
+                        <ActionBtn
+                          type="button"
+                          onClick={() => void handleRevokeLink()}
+                          style={{
+                            borderColor: '#EF4444',
+                            color: '#EF4444',
+                          }}
+                        >
+                          Confirm Revoke Link
+                        </ActionBtn>
+                        <ActionBtn
+                          type="button"
+                          onClick={() => setConfirmRevoke(false)}
+                        >
+                          Cancel
+                        </ActionBtn>
+                      </>
+                    ) : (
+                      <ActionBtn
+                        type="button"
+                        onClick={() => setConfirmRevoke(true)}
+                        style={{ color: '#EF4444' }}
+                      >
+                        🚫 Disable Share Link
+                      </ActionBtn>
+                    )}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div>
+                <p style={{ margin: '0 0 0.75rem', opacity: 0.75 }}>
+                  Public link sharing is currently disabled for this trip.
+                </p>
+                <ActionBtn
+                  type="button"
+                  variant="primary"
+                  onClick={() => void handleRotateLink()}
+                >
+                  ✨ Generate New Share Link
+                </ActionBtn>
+              </div>
+            )}
+          </PanelCard>
+        )}
+      </WorkspaceShell>
     </PageWrapper>
   );
 }
-
-

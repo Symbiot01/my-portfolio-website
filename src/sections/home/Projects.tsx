@@ -215,7 +215,25 @@ export default function Projects() {
 
   return (
     <Section id="projects">
-      {/* ... (HeadingWrapper and FilterBar are the same) ... */}
+      <HeadingWrapper>
+        <Heading>Projects</Heading>
+        <Subheading>
+          Selected work across AI, robotics, web, and interactive experiences.
+        </Subheading>
+      </HeadingWrapper>
+
+      <FilterBar>
+        {categories.map((category) => (
+          <FilterButton
+            key={category}
+            type="button"
+            active={active === category}
+            onClick={() => setActive(category)}
+          >
+            {category}
+          </FilterButton>
+        ))}
+      </FilterBar>
 
       <ProjectsGrid>
         {filtered.map((p, i) => (

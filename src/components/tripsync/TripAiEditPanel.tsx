@@ -3,26 +3,21 @@
 import { useEffect, useMemo, useState } from 'react';
 import styled from '@emotion/styled';
 import { api } from '@/lib/api';
-import { AiApplyEditsResponse, AiProposeEditsResponse, ItineraryOp, JsonPatchOp } from '@/types';
+import {
+  AiApplyEditsResponse,
+  AiProposeEditsResponse,
+  ItineraryOp,
+  JsonPatchOp,
+} from '@/types';
 
 const Wrapper = styled.div`
-  /* Keep it light like a blog section: no heavy outer borders */
-  padding: 0;
+  border: 1px solid ${({ theme }) => theme.border};
+  background: ${({ theme }) => theme.cardBg};
+  border-radius: 14px;
+  padding: 1rem;
 `;
 
-const Title = styled.h3`
-  margin: 0 0 0.5rem 0;
-  font-size: 1rem;
-  font-weight: 900;
-  color: ${({ theme }) => theme.text};
-`;
-
-const Muted = styled.div`
-  color: ${({ theme }) => theme.mutedText};
-  font-size: 0.85rem;
-`;
-
-const Row = styled.div`
+const HeaderRow = styled.div`
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
@@ -30,16 +25,71 @@ const Row = styled.div`
   justify-content: space-between;
 `;
 
-const Textarea = styled.textarea`
-  width: 100%;
-  min-height: 90px;
+const Title = styled.h3`
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: ${({ theme }) => theme.text};
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+`;
+
+const Muted = styled.div`
+  color: ${({ theme }) => theme.mutedText};
+  font-size: 0.82rem;
+`;
+
+const PromptPills = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.65rem;
+`;
+
+const PromptPill = styled.button`
   border: 1px solid ${({ theme }) => theme.border};
   background: ${({ theme }) => theme.background};
   color: ${({ theme }) => theme.text};
-  border-radius: 12px;
-  padding: 0.7rem 0.75rem;
-  font-size: 0.92rem;
-  line-height: 1.5;
+  border-radius: 999px;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover:not(:disabled) {
+    border-color: ${({ theme }) => theme.primary};
+    color: ${({ theme }) => theme.primary};
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const InputRow = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+  align-items: stretch;
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+  }
+`;
+
+const Textarea = styled.textarea`
+  flex: 1;
+  min-height: 64px;
+  border: 1px solid ${({ theme }) => theme.border};
+  background: ${({ theme }) => theme.background};
+  color: ${({ theme }) => theme.text};
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.88rem;
+  line-height: 1.45;
   resize: vertical;
 
   &:focus {
@@ -49,82 +99,96 @@ const Textarea = styled.textarea`
 `;
 
 const Button = styled.button<{ variant?: 'primary' | 'ghost' }>`
-  border: 1px solid ${({ theme, variant }) => (variant === 'primary' ? theme.primary : theme.border)};
-  background: ${({ theme, variant }) => (variant === 'primary' ? theme.primary : 'transparent')};
-  color: ${({ variant, theme }) => (variant === 'primary' ? '#fff' : theme.text)};
-  border-radius: 10px;
-  padding: 0.55rem 0.8rem;
-  font-weight: 900;
+  border: 1px solid
+    ${({ theme, variant }) =>
+      variant === 'primary' ? theme.primary : theme.border};
+  background: ${({ theme, variant }) =>
+    variant === 'primary' ? theme.primary : 'transparent'};
+  color: ${({ variant, theme }) =>
+    variant === 'primary' ? '#fff' : theme.text};
+  border-radius: 9px;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 800;
   cursor: pointer;
+  white-space: nowrap;
 
   &:disabled {
-    opacity: 0.55;
+    opacity: 0.5;
     cursor: not-allowed;
   }
 `;
 
-const Section = styled.div`
-  margin-top: 0.75rem;
-`;
-
-const List = styled.ul`
-  margin: 0.5rem 0 0 1.1rem;
-  padding: 0;
-  color: ${({ theme }) => theme.text};
-  font-size: 0.88rem;
-`;
-
 const Code = styled.code`
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-  font-size: 0.85rem;
-  background: ${({ theme }) => theme.cardBg};
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.78rem;
+  background: ${({ theme }) => theme.background};
   border: 1px solid ${({ theme }) => theme.border};
-  border-radius: 8px;
-  padding: 0.15rem 0.35rem;
+  border-radius: 6px;
+  padding: 0.1rem 0.35rem;
 `;
 
-const Divider = styled.div`
-  height: 1px;
-  background: ${({ theme }) => theme.border};
-  opacity: 0.7;
-  margin: 0.75rem 0;
+const StatusNotice = styled.div<{ tone: 'error' | 'success' | 'info' }>`
+  margin-top: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border: 1px solid
+    ${({ tone }) =>
+      tone === 'error'
+        ? '#EF444455'
+        : tone === 'success'
+        ? '#10B98155'
+        : '#6366F155'};
+  background: ${({ tone }) =>
+    tone === 'error'
+      ? '#EF444415'
+      : tone === 'success'
+      ? '#10B98115'
+      : '#6366F115'};
+  color: ${({ tone, theme }) =>
+    tone === 'error'
+      ? '#EF4444'
+      : tone === 'success'
+      ? '#10B981'
+      : theme.text};
 `;
 
 const ProposalCard = styled.div`
   margin-top: 0.75rem;
-  border: 1px solid ${({ theme }) => theme.border};
-  background: ${({ theme }) => theme.cardBg};
-  border-radius: 14px;
-  padding: 0.9rem;
+  border: 1px solid ${({ theme }) => theme.primary}66;
+  background: ${({ theme }) => theme.background};
+  border-radius: 12px;
+  padding: 0.85rem;
 `;
 
 const ProposalHeader = styled.div`
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
+  flex-wrap: wrap;
 `;
 
 const Badge = styled.span`
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.25rem 0.55rem;
+  gap: 0.3rem;
+  padding: 0.2rem 0.5rem;
   border-radius: 999px;
   border: 1px solid ${({ theme }) => theme.border};
-  background: ${({ theme }) => theme.background};
+  background: ${({ theme }) => theme.cardBg};
   color: ${({ theme }) => theme.text};
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 800;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
 `;
 
 const ProposalGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
-  margin-top: 0.75rem;
+  gap: 0.65rem;
+  margin-top: 0.65rem;
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
@@ -133,33 +197,33 @@ const ProposalGrid = styled.div`
 
 const ProposalPane = styled.div`
   border: 1px solid ${({ theme }) => theme.border};
-  background: ${({ theme }) => theme.background};
-  border-radius: 12px;
-  padding: 0.75rem;
+  background: ${({ theme }) => theme.cardBg};
+  border-radius: 10px;
+  padding: 0.65rem;
 `;
 
 const ProposalList = styled.ul`
-  margin: 0.5rem 0 0 0;
+  margin: 0.4rem 0 0 0;
   padding: 0;
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.35rem;
 `;
 
 const ProposalItem = styled.li`
   display: flex;
   align-items: flex-start;
-  gap: 0.5rem;
+  gap: 0.45rem;
   color: ${({ theme }) => theme.text};
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   line-height: 1.35;
 
   &::before {
     content: '';
-    width: 8px;
-    height: 8px;
-    margin-top: 0.4rem;
+    width: 6px;
+    height: 6px;
+    margin-top: 0.38rem;
     border-radius: 999px;
     background: ${({ theme }) => theme.primary};
     flex: 0 0 auto;
@@ -171,7 +235,6 @@ type Props = {
   tripId: string;
   tripAccessToken?: string;
   canEdit?: boolean;
-  /** Current TripDoc revision for optimistic concurrency. */
   docRevision: number | null;
   editDoc?: boolean;
   editItinerary?: boolean;
@@ -181,18 +244,31 @@ type Props = {
 
 function summarizePatch(op: JsonPatchOp): string {
   if ('from' in op) return `${op.op} ${op.from} → ${op.path}`;
-  if ('value' in op) return `${op.op} ${op.path}`;
+  if ('value' in op) {
+    const valPreview =
+      typeof op.value === 'string'
+        ? op.value.length > 60
+          ? `${op.value.slice(0, 60)}…`
+          : op.value
+        : JSON.stringify(op.value);
+    return `${op.op} ${op.path}: ${valPreview}`;
+  }
   return `${op.op} ${op.path}`;
 }
 
 function summarizeItineraryOp(op: ItineraryOp): string {
-  if (op.op === 'create') return `create: ${op.item.title} (${op.item.item_type}) @ ${op.item.start_time}`;
-  if (op.op === 'update') return `update: ${op.id}`;
-  return `delete: ${op.id}`;
+  if (op.op === 'create') {
+    return `+ Create "${op.item.title}" (${op.item.item_type}) @ ${op.item.start_time}`;
+  }
+  if (op.op === 'update') {
+    const fields = Object.keys(op.set || op.patch || {}).join(', ');
+    return `✎ Update item ${op.id}${fields ? ` (${fields})` : ''}`;
+  }
+  return `🗑 Delete item ${op.id}`;
 }
 
 export default function TripAiEditPanel({
-  title = 'AI Edit by Chat',
+  title = '✨ AI Trip Co-Pilot',
   tripId,
   tripAccessToken,
   canEdit = false,
@@ -210,34 +286,58 @@ export default function TripAiEditPanel({
   const [request, setRequest] = useState('');
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<{
+    text: string;
+    tone: 'error' | 'success' | 'info';
+  } | null>(null);
   const [proposal, setProposal] = useState<AiProposeEditsResponse | null>(null);
   const [localDocRevision, setLocalDocRevision] = useState<number | null>(null);
 
   useEffect(() => {
-    // Clear any stale proposal when switching trips.
     setProposal(null);
-    setError(null);
+    setStatus(null);
     setRequest('');
     setLocalDocRevision(null);
   }, [tripId]);
 
   const effectiveDocRevision = docRevision ?? localDocRevision;
 
-  const handlePropose = async () => {
-    if (!request.trim()) return;
+  const quickPrompts = useMemo(() => {
+    if (editItinerary && !editDoc) {
+      return [
+        'Add morning coffee & sightseeing on Day 1 at 09:30',
+        'Create a dinner reservation activity at 20:00',
+        'Add airport transfer on the final day',
+      ];
+    }
+    return [
+      'Write a concise trip brief and packing checklist in shared notes',
+      'Structure shared notes with emergency contacts, Wi-Fi, and house rules',
+      'Add a full Day 1 arrival, check-in, and dinner itinerary',
+    ];
+  }, [editDoc, editItinerary]);
+
+  const handlePropose = async (customText?: string) => {
+    const promptText = (customText ?? request).trim();
+    if (!promptText) return;
+    if (customText) setRequest(customText);
+
     try {
       setLoading(true);
-      setError(null);
+      setStatus(null);
       const res = await api.aiProposeEdits(
         tripId,
-        { user_request: request.trim(), edit_doc: editDoc, edit_itinerary: editItinerary },
+        {
+          user_request: promptText,
+          edit_doc: editDoc,
+          edit_itinerary: editItinerary,
+        },
         opts
       );
       setProposal(res);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to propose edits.';
-      setError(msg);
+      setStatus({ text: msg, tone: 'error' });
     } finally {
       setLoading(false);
     }
@@ -246,28 +346,31 @@ export default function TripAiEditPanel({
   const handleApply = async () => {
     if (!proposal) return;
     if (!canEdit) {
-      alert('Editing is disabled for this view.');
+      setStatus({
+        text: 'Editing is disabled for this view. Enable editing first.',
+        tone: 'error',
+      });
       return;
     }
-    // If we weren't given a revision, fetch it once so we can apply safely.
-    if (effectiveDocRevision == null) {
+
+    let rev = effectiveDocRevision;
+    if (rev == null) {
       try {
         const d = await api.getTripDoc(tripId, opts);
+        rev = d.revision;
         setLocalDocRevision(d.revision);
-      } catch (e) {
-        setError('Trip details not loaded yet. Please try again.');
+      } catch {
+        setStatus({
+          text: 'Could not load current TripDoc revision. Please try again.',
+          tone: 'error',
+        });
         return;
       }
     }
 
     try {
       setApplying(true);
-      setError(null);
-      const rev = effectiveDocRevision ?? localDocRevision;
-      if (rev == null) {
-        setError('TripDoc revision not available. Please retry.');
-        return;
-      }
+      setStatus(null);
       const res = await api.aiApplyEdits(
         tripId,
         {
@@ -279,18 +382,25 @@ export default function TripAiEditPanel({
         opts
       );
 
+      if (res.trip_doc?.revision) {
+        setLocalDocRevision(res.trip_doc.revision);
+      }
       await onNeedRefresh?.();
       onApplied?.(res);
       setProposal(null);
       setRequest('');
+      setStatus({ text: 'AI changes applied to trip!', tone: 'success' });
     } catch (e) {
       const err = e as Error & { status?: number };
       if (err?.status === 409) {
-        setError('Conflict: TripDoc changed. Reload Details and re-run the AI proposal.');
+        setStatus({
+          text: 'Conflict: Trip details changed elsewhere. Reload and re-propose.',
+          tone: 'error',
+        });
         return;
       }
       const msg = e instanceof Error ? e.message : 'Failed to apply edits.';
-      setError(msg);
+      setStatus({ text: msg, tone: 'error' });
     } finally {
       setApplying(false);
     }
@@ -298,79 +408,98 @@ export default function TripAiEditPanel({
 
   return (
     <Wrapper>
-      <Row>
+      <HeaderRow>
         <Title>{title}</Title>
         <Muted>
           {effectiveDocRevision != null ? (
             <>
-              Doc revision: <Code>{effectiveDocRevision}</Code>
+              Rev <Code>#{effectiveDocRevision}</Code>
             </>
           ) : (
-            'Doc revision: —'
+            'AI-assisted structured updates'
           )}
         </Muted>
-      </Row>
+      </HeaderRow>
 
-      {tripAccessToken && !canEdit && (
-        <Muted style={{ marginTop: '0.5rem' }}>
-          Quicklink view: enable editing to apply changes.
-        </Muted>
-      )}
+      <PromptPills>
+        {quickPrompts.map((p) => (
+          <PromptPill
+            key={p}
+            type="button"
+            disabled={loading || applying}
+            onClick={() => void handlePropose(p)}
+          >
+            ⚡ {p}
+          </PromptPill>
+        ))}
+      </PromptPills>
 
-      {error && <Muted style={{ marginTop: '0.5rem' }}>{error}</Muted>}
-
-      <Section>
+      <InputRow>
         <Textarea
           value={request}
           onChange={(e) => setRequest(e.target.value)}
-          placeholder="Ask the AI to edit the trip brief/notes and/or add itinerary items…"
+          placeholder="Describe changes in plain English (e.g., 'Add a 2-night hotel stay in Reykjavik and morning whale watching')…"
           disabled={loading || applying}
         />
-      </Section>
-
-      <Row style={{ marginTop: '0.6rem' }}>
-        <Button type="button" variant="ghost" onClick={() => setProposal(null)} disabled={!proposal || loading || applying}>
-          Clear proposal
-        </Button>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <Button type="button" onClick={handlePropose} disabled={loading || applying || !request.trim()}>
-            {loading ? 'Proposing…' : 'Propose edits'}
-          </Button>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.4rem',
+            justifyContent: 'space-between',
+          }}
+        >
           <Button
             type="button"
             variant="primary"
-            onClick={handleApply}
-            disabled={!proposal || applying || loading || !canEdit}
-            title={!canEdit ? 'Enable editing to apply changes' : undefined}
+            onClick={() => void handlePropose()}
+            disabled={loading || applying || !request.trim()}
           >
-            {applying ? 'Applying…' : 'Apply changes'}
+            {loading ? 'Thinking…' : '✨ Propose'}
           </Button>
+          {proposal && (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setProposal(null)}
+              disabled={loading || applying}
+            >
+              Clear
+            </Button>
+          )}
         </div>
-      </Row>
+      </InputRow>
+
+      {status && <StatusNotice tone={status.tone}>{status.text}</StatusNotice>}
 
       {proposal && (
         <ProposalCard>
           <ProposalHeader>
-            <div>
-              <Title style={{ margin: 0 }}>Proposed changes</Title>
-              <Muted style={{ marginTop: '0.25rem' }}>
-                Nonce expires: <Code>{proposal.nonce_expires_at}</Code>
-              </Muted>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <strong style={{ fontSize: '0.9rem' }}>Proposed Edits Ready</strong>
+              <Badge>Doc patches: {proposal.trip_doc_patch.length}</Badge>
+              <Badge>Itinerary ops: {proposal.itinerary_ops.length}</Badge>
             </div>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-              <Badge>Doc: {proposal.trip_doc_patch.length}</Badge>
-              <Badge>Itinerary: {proposal.itinerary_ops.length}</Badge>
+            <div style={{ display: 'flex', gap: '0.45rem' }}>
+              <Button
+                type="button"
+                variant="primary"
+                onClick={() => void handleApply()}
+                disabled={applying || loading || !canEdit}
+              >
+                {applying ? 'Applying…' : '✓ Apply Now'}
+              </Button>
             </div>
           </ProposalHeader>
 
           <ProposalGrid>
             {(editDoc || proposal.trip_doc_patch.length > 0) && (
               <ProposalPane>
-                <Muted style={{ fontWeight: 800, letterSpacing: '0.02em', textTransform: 'uppercase' }}>
-                  TripDoc patch
+                <Muted style={{ fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>
+                  Trip Details Patch
                 </Muted>
                 {proposal.trip_doc_patch.length === 0 ? (
-                  <Muted style={{ marginTop: '0.5rem' }}>—</Muted>
+                  <Muted style={{ marginTop: '0.35rem' }}>No document changes</Muted>
                 ) : (
                   <ProposalList>
                     {proposal.trip_doc_patch.map((op, idx) => (
@@ -385,16 +514,18 @@ export default function TripAiEditPanel({
 
             {(editItinerary || proposal.itinerary_ops.length > 0) && (
               <ProposalPane>
-                <Muted style={{ fontWeight: 800, letterSpacing: '0.02em', textTransform: 'uppercase' }}>
-                  Itinerary ops
+                <Muted style={{ fontWeight: 800, textTransform: 'uppercase', fontSize: '0.72rem' }}>
+                  Itinerary Operations
                 </Muted>
                 {proposal.itinerary_ops.length === 0 ? (
-                  <Muted style={{ marginTop: '0.5rem' }}>—</Muted>
+                  <Muted style={{ marginTop: '0.35rem' }}>No itinerary changes</Muted>
                 ) : (
                   <ProposalList>
                     {proposal.itinerary_ops.map((op, idx) => (
                       <ProposalItem key={idx}>
-                        <span style={{ wordBreak: 'break-word' }}>{summarizeItineraryOp(op)}</span>
+                        <span style={{ wordBreak: 'break-word' }}>
+                          {summarizeItineraryOp(op)}
+                        </span>
                       </ProposalItem>
                     ))}
                   </ProposalList>
@@ -402,14 +533,8 @@ export default function TripAiEditPanel({
               </ProposalPane>
             )}
           </ProposalGrid>
-
-          {(editDoc || proposal.trip_doc_patch.length > 0) && (editItinerary || proposal.itinerary_ops.length > 0) ? (
-            <Divider />
-          ) : null}
         </ProposalCard>
       )}
     </Wrapper>
   );
 }
-
-

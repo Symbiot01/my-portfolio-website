@@ -14,7 +14,11 @@ declare module '@emotion/react' {
         text: string;
         primary: string;
         border: string;
-        // Add other theme properties here
+        background: string;
+        mutedText: string;
+        shadow: string;
+        gradient: string;
+        titleGradient: string;
     }
   }
 
@@ -218,6 +222,11 @@ export default function Navbar() {
 
   const closeMobile = () => setMobileOpen(false);
 
+  const resolveHref = (href: string) => {
+    if (!href.startsWith('#')) return href;
+    return pathname === '/' ? href : `/${href}`;
+  };
+
   return (
     <Nav>
       <Logo>
@@ -228,7 +237,7 @@ export default function Navbar() {
 
       <NavLinks>
         {navItems.map((item) => (
-          <Link key={item.label} href={item.href}>
+          <Link key={item.label} href={resolveHref(item.href)}>
             {item.label}
           </Link>
         ))}
@@ -279,7 +288,7 @@ export default function Navbar() {
           <MobileSectionTitle>Navigate</MobileSectionTitle>
           <MobileLinks>
             {navItems.map((item) => (
-              <Link key={item.label} href={item.href} onClick={closeMobile}>
+              <Link key={item.label} href={resolveHref(item.href)} onClick={closeMobile}>
                 {item.label}
               </Link>
             ))}

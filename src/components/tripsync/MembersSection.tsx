@@ -3,115 +3,36 @@
 import { useState } from 'react';
 import styled from '@emotion/styled';
 import { api } from '@/lib/api';
-import { TripRead, TripMemberInfo } from '@/types';
+import { TripRead, TripMemberInfo, BalanceEntry } from '@/types';
+import { formatCurrency } from '@/lib/expenseUtils';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const MembersGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1rem;
-  margin-bottom: 2rem;
-`;
-
-const MemberCard = styled(motion.div)`
-  background: ${({ theme }) => theme.background};
-  border: 1px solid ${({ theme }) => theme.border};
-  border-radius: 12px;
-  padding: 1.5rem;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  transition: all 0.2s ease;
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  }
-`;
-
-const MemberAvatar = styled.div<{ linked: boolean }>`
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background: ${({ linked, theme }) => (linked ? theme.accent : theme.mutedText)};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: white;
-  flex-shrink: 0;
-`;
-
-const MemberInfo = styled.div`
-  flex: 1;
-`;
-
-const MemberName = styled.h4`
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin-bottom: 0.25rem;
-  color: ${({ theme }) => theme.text};
-`;
-
-const MemberBadge = styled.span<{ linked: boolean }>`
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
-  border-radius: 4px;
-  background: ${({ linked, theme }) => (linked ? theme.accent : theme.mutedText)};
-  color: white;
-  font-weight: 600;
-`;
-
-const AddMemberSection = styled.div`
-  background: ${({ theme }) => theme.background};
-  border: 2px dashed ${({ theme }) => theme.border};
-  border-radius: 12px;
-  padding: 2rem;
-  margin-bottom: 2rem;
-`;
-
-const SectionTitle = styled.h3`
-  font-size: 1.2rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
-  color: ${({ theme }) => theme.text};
-`;
-
-const Form = styled.form`
-  display: flex;
-  gap: 1rem;
-  align-items: flex-end;
-
-  @media (max-width: 768px) {
-    flex-direction: column;
-    align-items: stretch;
-  }
-`;
-
-const InputGroup = styled.div`
-  flex: 1;
+const Container = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 1rem;
 `;
 
-const Label = styled.label`
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: ${({ theme }) => theme.text};
+const QuickAddBar = styled.form`
+  background: ${({ theme }) => theme.cardBg};
+  border: 1px solid ${({ theme }) => theme.border};
+  border-radius: 14px;
+  padding: 0.9rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
 `;
 
 const Input = styled.input`
-  padding: 0.75rem;
-  border-radius: 8px;
+  flex: 1;
+  min-width: 200px;
+  padding: 0.6rem 0.85rem;
+  border-radius: 9px;
   border: 1px solid ${({ theme }) => theme.border};
-  background: ${({ theme }) => theme.cardBg};
+  background: ${({ theme }) => theme.background};
   color: ${({ theme }) => theme.text};
-  font-size: 1rem;
+  font-size: 0.92rem;
 
   &:focus {
     outline: none;
@@ -119,21 +40,18 @@ const Input = styled.input`
   }
 `;
 
-const Button = styled.button`
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
-  border: none;
-  background: ${({ theme }) => theme.primary};
-  color: white;
-  font-size: 1rem;
-  font-weight: 600;
+const Button = styled.button<{ variant?: 'primary' | 'ghost' }>`
+  padding: 0.6rem 1.1rem;
+  border-radius: 9px;
+  border: 1px solid
+    ${({ variant, theme }) => (variant === 'ghost' ? theme.border : 'transparent')};
+  background: ${({ variant, theme }) =>
+    variant === 'ghost' ? 'transparent' : theme.primary};
+  color: ${({ variant, theme }) => (variant === 'ghost' ? theme.text : '#fff')};
+  font-size: 0.88rem;
+  font-weight: 700;
   cursor: pointer;
-  transition: opacity 0.2s ease;
   white-space: nowrap;
-
-  &:hover {
-    opacity: 0.9;
-  }
 
   &:disabled {
     opacity: 0.5;
@@ -141,174 +59,277 @@ const Button = styled.button`
   }
 `;
 
-const EmptyState = styled.div`
-  text-align: center;
-  padding: 3rem;
-  color: ${({ theme }) => theme.mutedText};
-  background: ${({ theme }) => theme.background};
-  border-radius: 12px;
-  border: 1px dashed ${({ theme }) => theme.border};
+const StatusBanner = styled.div<{ tone: 'success' | 'error' }>`
+  padding: 0.6rem 0.9rem;
+  border-radius: 9px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: ${({ tone }) => (tone === 'success' ? '#10B98118' : '#EF444418')};
+  color: ${({ tone }) => (tone === 'success' ? '#10B981' : '#EF4444')};
+  border: 1px solid ${({ tone }) => (tone === 'success' ? '#10B98155' : '#EF444455')};
 `;
 
-const ActionButtons = styled.div`
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 1.5rem;
+const MembersGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.85rem;
 `;
 
-const SecondaryButton = styled.button`
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
+const MemberCard = styled(motion.div)`
+  background: ${({ theme }) => theme.cardBg};
   border: 1px solid ${({ theme }) => theme.border};
-  background: transparent;
-  color: ${({ theme }) => theme.text};
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  border-radius: 13px;
+  padding: 1rem 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  transition: border-color 0.15s ease;
 
   &:hover {
-    background: ${({ theme }) => theme.toggleBg};
+    border-color: ${({ theme }) => theme.primary}88;
   }
+`;
+
+const MemberAvatar = styled.div<{ linked: boolean }>`
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: ${({ linked, theme }) =>
+    linked ? `${theme.primary}25` : `${theme.mutedText}20`};
+  color: ${({ linked, theme }) => (linked ? theme.primary : theme.mutedText)};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 800;
+  flex-shrink: 0;
+`;
+
+const MemberBadge = styled.span<{ linked: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.16rem 0.5rem;
+  font-size: 0.72rem;
+  border-radius: 999px;
+  background: ${({ linked }) => (linked ? '#10B98120' : '#64748B20')};
+  color: ${({ linked }) => (linked ? '#10B981' : '#94A3B8')};
+  font-weight: 700;
 `;
 
 interface MembersSectionProps {
   tripId: string;
   members: TripMemberInfo[];
+  balances?: BalanceEntry[];
   onUpdate: (updatedTrip: TripRead) => void;
   tripAccessToken?: string;
-  /**
-   * Quicklink write gate.
-   * When false (and tripAccessToken is present), disable mutations.
-   */
   canEdit?: boolean;
 }
 
 export default function MembersSection({
   tripId,
   members,
+  balances = [],
   onUpdate,
   tripAccessToken,
   canEdit = true,
 }: MembersSectionProps) {
   const [displayName, setDisplayName] = useState('');
   const [isAdding, setIsAdding] = useState(false);
-  const [selectedMember, setSelectedMember] = useState<string | null>(null);
+  const [linkingId, setLinkingId] = useState<string | null>(null);
+  const [status, setStatus] = useState<{ text: string; tone: 'success' | 'error' } | null>(
+    null
+  );
+
+  const balanceMap = new Map(balances.map((b) => [b.member_id, b.balance]));
 
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!displayName.trim()) return;
     if (tripAccessToken && !canEdit) {
-      alert('Editing is disabled for this share link. Enable editing to add members.');
+      setStatus({
+        text: 'Enable editing on this share link to add members.',
+        tone: 'error',
+      });
+      return;
+    }
+
+    if (tripId === 'demo') {
+      const name = displayName.trim();
+      onUpdate({
+        id: tripId,
+        name: 'Demo Trip',
+        members: [
+          ...members,
+          {
+            member_id: `demo-${Date.now().toString(36)}`,
+            display_name: name,
+            linked: false,
+          },
+        ],
+      });
+      setDisplayName('');
+      setStatus({ text: `Added ${name} to the trip!`, tone: 'success' });
+      setIsAdding(false);
       return;
     }
 
     setIsAdding(true);
+    setStatus(null);
     try {
       const updatedTrip = await api.addMember(
         tripId,
-        { display_name: displayName },
+        { display_name: displayName.trim() },
         tripAccessToken ? { tripAccessToken, tripEdit: canEdit } : undefined
       );
       onUpdate(updatedTrip);
       setDisplayName('');
-      alert('Member added successfully!');
+      setStatus({ text: `Added ${displayName.trim()} to the trip!`, tone: 'success' });
     } catch (error) {
-      console.error('Failed to add member:', error);
-      alert('Failed to add member. Please try again.');
+      setStatus({
+        text: error instanceof Error ? error.message : 'Failed to add member.',
+        tone: 'error',
+      });
     } finally {
       setIsAdding(false);
     }
   };
 
   const handleLinkSelf = async (memberId: string) => {
+    setLinkingId(memberId);
+    setStatus(null);
+    if (tripId === 'demo') {
+      onUpdate({
+        id: tripId,
+        name: 'Demo Trip',
+        members: members.map((m) =>
+          m.member_id === memberId ? { ...m, linked: true } : m
+        ),
+      });
+      setStatus({ text: 'Linked member slot in this demo.', tone: 'success' });
+      setLinkingId(null);
+      return;
+    }
     try {
       const updatedTrip = await api.linkSelfMember(tripId, { member_id: memberId });
       onUpdate(updatedTrip);
-      alert('Successfully linked to your account!');
+      setStatus({ text: 'Linked member slot to your account!', tone: 'success' });
     } catch (error) {
-      console.error('Failed to link member:', error);
-      alert('Failed to link member. Please try again.');
+      setStatus({
+        text: error instanceof Error ? error.message : 'Failed to link member.',
+        tone: 'error',
+      });
+    } finally {
+      setLinkingId(null);
     }
   };
 
-  const getInitials = (name: string) => {
-    return name
+  const getInitials = (name: string) =>
+    name
       .split(' ')
       .map((n) => n[0])
       .join('')
       .toUpperCase()
       .slice(0, 2);
-  };
 
   return (
-    <>
-      <AddMemberSection>
-        <SectionTitle>Add New Member</SectionTitle>
-        <Form onSubmit={handleAddMember}>
-          <InputGroup>
-            <Label htmlFor="displayName">Member Name</Label>
-            <Input
-              id="displayName"
-              type="text"
-              placeholder="Enter member name"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              required
-              disabled={tripAccessToken ? !canEdit || isAdding : isAdding}
-            />
-          </InputGroup>
-          <Button type="submit" disabled={tripAccessToken ? !canEdit || isAdding : isAdding}>
-            {isAdding ? 'Adding...' : 'Add Member'}
-          </Button>
-        </Form>
-        {tripAccessToken && !canEdit && (
-          <div style={{ marginTop: '0.75rem', fontSize: '0.9rem', color: 'var(--muted-text)' }}>
-            Editing is disabled for this share link.
-          </div>
-        )}
-      </AddMemberSection>
+    <Container>
+      <QuickAddBar onSubmit={handleAddMember}>
+        <strong style={{ fontSize: '0.92rem' }}>👥 Add Traveler:</strong>
+        <Input
+          id="displayName"
+          type="text"
+          placeholder="Enter friend's name (e.g. Priya, Rahul)…"
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+          required
+          disabled={tripAccessToken ? !canEdit || isAdding : isAdding}
+        />
+        <Button
+          type="submit"
+          disabled={
+            !displayName.trim() || (tripAccessToken ? !canEdit || isAdding : isAdding)
+          }
+        >
+          {isAdding ? 'Adding…' : '+ Add Member'}
+        </Button>
+      </QuickAddBar>
 
-      <SectionTitle>Trip Members ({members.length})</SectionTitle>
+      {status && <StatusBanner tone={status.tone}>{status.text}</StatusBanner>}
 
-      {members.length === 0 ? (
-        <EmptyState>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>👥</div>
-          <p>No members yet. Add your first member above!</p>
-        </EmptyState>
-      ) : (
-        <MembersGrid>
-          <AnimatePresence>
-            {members.map((member, index) => (
+      <MembersGrid>
+        <AnimatePresence>
+          {members.map((member, index) => {
+            const bal = balanceMap.get(member.member_id) ?? 0;
+            return (
               <MemberCard
                 key={member.member_id}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ duration: 0.3, delay: index * 0.05 }}
+                transition={{ duration: 0.2, delay: index * 0.03 }}
               >
-                <MemberAvatar linked={member.linked}>
-                  {getInitials(member.display_name)}
-                </MemberAvatar>
-                <MemberInfo>
-                  <MemberName>{member.display_name}</MemberName>
-                  <MemberBadge linked={member.linked}>
-                    {member.linked ? '✓ Linked' : '○ Unlinked'}
-                  </MemberBadge>
-                  {!tripAccessToken && !member.linked && (
-                    <ActionButtons>
-                      <SecondaryButton onClick={() => handleLinkSelf(member.member_id)}>
-                        Link to Me
-                      </SecondaryButton>
-                    </ActionButtons>
-                  )}
-                </MemberInfo>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                  <MemberAvatar linked={member.linked}>
+                    {getInitials(member.display_name)}
+                  </MemberAvatar>
+                  <div style={{ minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontWeight: 800,
+                        fontSize: '0.96rem',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {member.display_name}
+                    </div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        marginTop: '0.2rem',
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <MemberBadge linked={member.linked}>
+                        {member.linked ? '✓ Linked Account' : 'Guest Slot'}
+                      </MemberBadge>
+                      {Math.abs(bal) > 0.01 && (
+                        <span
+                          style={{
+                            fontSize: '0.74rem',
+                            fontWeight: 700,
+                            color: bal > 0 ? '#10B981' : '#EF4444',
+                          }}
+                        >
+                          {bal > 0
+                            ? `+${formatCurrency(bal)}`
+                            : `-${formatCurrency(Math.abs(bal))}`}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {!tripAccessToken && !member.linked && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={linkingId === member.member_id}
+                    onClick={() => void handleLinkSelf(member.member_id)}
+                    style={{ padding: '0.4rem 0.65rem', fontSize: '0.78rem' }}
+                  >
+                    {linkingId === member.member_id ? 'Linking…' : 'Claim Slot'}
+                  </Button>
+                )}
               </MemberCard>
-            ))}
-          </AnimatePresence>
-        </MembersGrid>
-      )}
-    </>
+            );
+          })}
+        </AnimatePresence>
+      </MembersGrid>
+    </Container>
   );
 }
-

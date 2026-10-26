@@ -1,631 +1,371 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState, useCallback } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import styled from '@emotion/styled';
 import Navbar from '@/sections/home/Navbar';
 import { api } from '@/lib/api';
-import { BalanceEntry, ItineraryItemRead, TripRead } from '@/types';
+import {
+  BalanceEntry,
+  ExpenseRead,
+  ItineraryItemRead,
+  SettlementRead,
+  TripDoc,
+  TripRead,
+} from '@/types';
 import MembersSection from '@/components/tripsync/MembersSection';
 import ExpensesSection from '@/components/tripsync/ExpensesSection';
-import TripDetailsSection from '@/components/tripsync/TripDetailsSection';
 import ItinerarySection from '@/components/tripsync/ItinerarySection';
-import { MockExpense } from '@/lib/mockData';
+import TripDetailsSection from '@/components/tripsync/TripDetailsSection';
+import {
+  calculateOptimalSettlements,
+  computeExpenseAnalytics,
+  formatCurrency,
+} from '@/lib/expenseUtils';
 
 const PageWrapper = styled.div`
   min-height: 100vh;
   background: ${({ theme }) => theme.background};
-`;
-
-const ContentWrapper = styled.div`
-  display: flex;
-  min-height: calc(100vh - 70px);
-
-  @media (max-width: 968px) {
-    flex-direction: column;
-  }
-`;
-
-const Sidebar = styled.aside`
-  width: 280px;
-  background: ${({ theme }) => theme.cardBg};
-  border-right: 1px solid ${({ theme }) => theme.border};
-  display: flex;
-  flex-direction: column;
-  position: fixed;
-  left: 0;
-  top: 70px;
-  bottom: 0;
-  z-index: 30;
-  overflow-y: auto;
-
-  @media (max-width: 968px) {
-    position: relative;
-    width: 100%;
-    top: 0;
-    border-right: none;
-    border-bottom: 1px solid ${({ theme }) => theme.border};
-  }
-`;
-
-const SidebarContent = styled.div`
-  padding: 2rem 1.5rem;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-
-  @media (max-width: 768px) {
-    padding: 0.9rem 1rem;
-  }
-`;
-
-const TripInfo = styled.div`
-  margin-bottom: 2.5rem;
-  padding-bottom: 2rem;
-  border-bottom: 2px solid ${({ theme }) => theme.border};
-
-  @media (max-width: 768px) {
-    margin-bottom: 0.5rem;
-    padding-bottom: 0.5rem;
-    border-bottom-width: 1px;
-  }
-`;
-
-const TripTitleRow = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-`;
-
-const TripTitle = styled.h2`
-  font-size: 1.4rem;
-  font-weight: 800;
-  margin-bottom: 0.75rem;
   color: ${({ theme }) => theme.text};
-  background: ${({ theme }) => theme.titleGradient};
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-  margin-top: 0;
-
-  @media (max-width: 768px) {
-    margin-bottom: 0;
-    font-size: 1.25rem;
-  }
 `;
 
-const TripDescription = styled.p`
-  font-size: 0.85rem;
-  color: ${({ theme }) => theme.mutedText};
-  line-height: 1.5;
-  margin-bottom: 0.75rem;
-
-  @media (max-width: 768px) {
-    display: none;
-  }
-`;
-
-const TripMeta = styled.div`
+const WorkspaceShell = styled.div`
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 5.25rem 1.25rem 2.5rem;
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.8rem;
-  color: ${({ theme }) => theme.mutedText};
-  padding: 0.5rem 0.75rem;
-  background: ${({ theme }) => theme.background};
-  border-radius: 6px;
-  margin-top: 0.75rem;
-
-  @media (max-width: 768px) {
-    display: none;
-  }
+  flex-direction: column;
+  gap: 1rem;
 `;
 
-const NavSection = styled.nav`
+const CommandBar = styled.div`
+  background: ${({ theme }) => theme.cardBg};
+  border: 1px solid ${({ theme }) => theme.border};
+  border-radius: 16px;
+  padding: 0.95rem 1.15rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-
-  /* On phones we move section navigation into a hamburger menu */
-  @media (max-width: 768px) {
-    display: none;
-  }
+  box-shadow: 0 2px 12px ${({ theme }) => theme.shadow};
 `;
 
-const NavButton = styled.button<{ active: boolean }>`
-  padding: 1rem 1.25rem;
-  border-radius: 10px;
-  border: none;
-  background: ${({ active, theme }) => (active ? theme.primary : 'transparent')};
-  color: ${({ active, theme }) => (active ? '#fff' : theme.text)};
-  font-size: 0.95rem;
-  font-weight: ${({ active }) => (active ? 700 : 500)};
-  text-align: left;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-
-  &::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 4px;
-    height: ${({ active }) => (active ? '60%' : '0')};
-    background: ${({ theme }) => theme.accent};
-    border-radius: 0 4px 4px 0;
-    transition: height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  &:hover {
-    background: ${({ active, theme }) => (active ? theme.primary : theme.toggleBg)};
-    transform: translateX(4px);
-
-    &::before {
-      height: 60%;
-    }
-  }
-
-  &:active {
-    transform: translateX(2px) scale(0.98);
-  }
-`;
-
-const TripMenuButton = styled.button`
-  display: none;
-  border: 1px solid ${({ theme }) => theme.border};
-  background: ${({ theme }) => theme.cardBg};
-  color: ${({ theme }) => theme.text};
-  padding: 0.45rem 0.55rem;
-  border-radius: 9px;
-  cursor: pointer;
-  line-height: 1;
-  font-size: 1.05rem;
-  min-width: 40px;
-  min-height: 40px;
+const TopRow = styled.div`
+  display: flex;
   align-items: center;
-  justify-content: center;
-
-  &:hover {
-    border-color: ${({ theme }) => theme.primary};
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.primary};
-    outline-offset: 2px;
-  }
-
-  @media (max-width: 768px) {
-    display: inline-flex;
-  }
+  justify-content: space-between;
+  gap: 0.85rem;
+  flex-wrap: wrap;
 `;
 
-const MobileOverlay = styled.div<{ open: boolean }>`
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  z-index: 90;
-  display: ${({ open }) => (open ? 'block' : 'none')};
-`;
-
-const MobileMenu = styled.div`
-  position: fixed;
-  top: 70px; /* navbar height */
-  right: 12px;
-  left: 12px;
-  background: ${({ theme }) => theme.surface};
-  border: 1px solid ${({ theme }) => theme.border};
-  border-radius: 12px;
-  z-index: 91;
-  padding: 0.5rem;
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.16);
-
-  @media (min-width: 769px) {
-    display: none;
-  }
-`;
-
-const MobileMenuItem = styled.button<{ active: boolean }>`
-  width: 100%;
-  text-align: left;
-  padding: 0.85rem 0.8rem;
-  border-radius: 10px;
-  border: 1px solid transparent;
-  background: ${({ active, theme }) => (active ? theme.primary : 'transparent')};
-  color: ${({ active, theme }) => (active ? '#fff' : theme.text)};
-  font-weight: ${({ active }) => (active ? 800 : 650)};
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  cursor: pointer;
-
-  &:hover {
-    border-color: ${({ active, theme }) => (active ? 'transparent' : theme.border)};
-    background: ${({ active, theme }) => (active ? theme.primary : theme.toggleBg)};
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.primary};
-    outline-offset: 2px;
-  }
-`;
-
-const MainContent = styled.div`
-  flex: 1;
-  margin-left: 280px;
-
-  @media (max-width: 968px) {
-    margin-left: 0;
-  }
-`;
-
-const MainPanel = styled.main`
-  padding: 2rem;
-  max-width: 1400px;
-  width: 100%;
-  margin: 0 auto;
-
-  @media (max-width: 768px) {
-    padding: 1rem;
-  }
-`;
-
-const PanelHeader = styled.div`
-  margin-bottom: 1.25rem;
-`;
-
-const PanelTitle = styled.h1`
-  font-size: 2rem;
+const Title = styled.h1`
+  margin: 0;
+  font-size: clamp(1.25rem, 2.2vw, 1.6rem);
   font-weight: 900;
   color: ${({ theme }) => theme.text};
-  text-transform: capitalize;
-  position: relative;
-  padding-bottom: 0.5rem;
-  margin-top: 0;
-
-  &::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    bottom: 0;
-    width: 60px;
-    height: 3px;
-    background: ${({ theme }) => theme.primary};
-    border-radius: 0;
-  }
 `;
 
-const Notice = styled.div`
-  padding: 0.75rem 1rem;
-  border: 1px solid ${({ theme }) => theme.border};
+const Badge = styled.span<{ tone?: 'primary' | 'success' | 'warning' }>`
+  padding: 0.22rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  background: ${({ tone, theme }) =>
+    tone === 'primary'
+      ? `${theme.primary}20`
+      : tone === 'success'
+      ? '#10B98120'
+      : tone === 'warning'
+      ? '#F59E0B20'
+      : `${theme.mutedText}18`};
+  color: ${({ tone, theme }) =>
+    tone === 'primary'
+      ? theme.primary
+      : tone === 'success'
+      ? '#10B981'
+      : tone === 'warning'
+      ? '#F59E0B'
+      : theme.mutedText};
+`;
+
+const ModeToggleBtn = styled.button<{ active: boolean }>`
+  padding: 0.45rem 0.85rem;
+  border-radius: 9px;
+  border: 1px solid ${({ active, theme }) => (active ? '#10B981' : theme.border)};
+  background: ${({ active }) => (active ? '#10B98120' : 'transparent')};
+  color: ${({ active, theme }) => (active ? '#10B981' : theme.text)};
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+`;
+
+const TabsRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  overflow-x: auto;
+  padding-top: 0.55rem;
+  border-top: 1px solid ${({ theme }) => theme.border};
+`;
+
+const TabButton = styled.button<{ active: boolean }>`
+  padding: 0.48rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid ${({ active, theme }) => (active ? theme.primary : 'transparent')};
+  background: ${({ active, theme }) =>
+    active ? `${theme.primary}18` : 'transparent'};
+  color: ${({ active, theme }) => (active ? theme.primary : theme.text)};
+  font-size: 0.83rem;
+  font-weight: ${({ active }) => (active ? 800 : 600)};
+  cursor: pointer;
+  white-space: nowrap;
+`;
+
+const Card = styled.div`
   background: ${({ theme }) => theme.cardBg};
-  border-radius: 8px;
-  color: ${({ theme }) => theme.mutedText};
-  margin-bottom: 1rem;
-  font-size: 0.9rem;
+  border: 1px solid ${({ theme }) => theme.border};
+  border-radius: 14px;
+  padding: 1.25rem;
 `;
 
-const SESSION_LAST_TOKEN_KEY = 'tripsync:last_access_token';
-const SESSION_TRIP_TOKEN_PREFIX = 'tripsync:access_token:';
+type Section = 'expenses' | 'settlements' | 'itinerary' | 'details' | 'members';
 
-const isValidUuid = (value: string): boolean => {
-  // Accepts v1-v5 UUIDs (lower/upper)
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-    value
-  );
-};
+function TripAccessInner() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const token = useMemo(() => searchParams?.get('t') || '', [searchParams]);
 
-const parseAccessTokenFromHash = (hash: string): string | null => {
-  const raw = (hash || '').replace(/^#/, '').trim();
-  if (!raw) return null;
-
-  // Support either "#<uuid>" or "#access_token=<uuid>"
-  if (raw.includes('=') || raw.includes('&')) {
-    const params = new URLSearchParams(raw);
-    const tok = params.get('access_token') ?? params.get('token');
-    return tok ? tok.trim() : null;
-  }
-
-  try {
-    return decodeURIComponent(raw).trim();
-  } catch {
-    return raw;
-  }
-};
-
-export default function TripSyncAccessPage() {
   const [trip, setTrip] = useState<TripRead | null>(null);
-  const [activeSection, setActiveSection] = useState<
-    'members' | 'details' | 'itinerary' | 'expenses'
-  >('members');
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [quicklinkEditEnabled, setQuicklinkEditEnabled] = useState(false);
+  const [expenses, setExpenses] = useState<ExpenseRead[]>([]);
+  const [balances, setBalances] = useState<BalanceEntry[] | null>(null);
+  const [settlements, setSettlements] = useState<SettlementRead[]>([]);
   const [itinerary, setItinerary] = useState<ItineraryItemRead[]>([]);
-  const [expenses, setExpenses] = useState<MockExpense[]>([]);
-  const [balances, setBalances] = useState<BalanceEntry[]>([]);
+  const [tripDoc, setTripDoc] = useState<TripDoc | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [tripAccessToken, setTripAccessToken] = useState<string | null>(null);
+  const [activeSection, setActiveSection] = useState<Section>('expenses');
+  const [canEdit, setCanEdit] = useState(true);
 
-  const sections = useMemo(() => (['members', 'details', 'itinerary', 'expenses'] as const), []);
+  const loadByToken = useCallback(async () => {
+    if (!token) {
+      setError('Missing access token in URL (?t=...).');
+      setLoading(false);
+      return;
+    }
 
-  const tripSyncOpts = useMemo(
-    () => (tripAccessToken ? { tripAccessToken } : undefined),
-    [tripAccessToken]
+    try {
+      setLoading(true);
+      setError(null);
+      const t = await api.previewTripByAccess(token);
+      setTrip(t);
+
+      const opts = { tripAccessToken: token, tripEdit: canEdit };
+      const [e, b, it, s, d] = await Promise.all([
+        api.listExpenses(t.id, opts),
+        api.getBalances(t.id, opts),
+        api.listItinerary(t.id, opts),
+        api.listSettlements(t.id, opts),
+        api.getTripDoc(t.id, opts).catch(() => null),
+      ]);
+      setExpenses(e);
+      setBalances(
+        b.map((entry) => ({
+          ...entry,
+          display_name:
+            t.members.find((m) => m.member_id === entry.member_id)?.display_name ||
+            entry.display_name,
+        }))
+      );
+      setItinerary(it);
+      setSettlements(s);
+      if (d) setTripDoc(d);
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : 'Invalid or expired shared trip link.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [token, canEdit]);
+
+  useEffect(() => {
+    void loadByToken();
+  }, [loadByToken]);
+
+  const analytics = useMemo(
+    () => computeExpenseAnalytics(expenses, trip?.members ?? [], balances),
+    [expenses, trip?.members, balances]
   );
 
-  // Close menu on Escape and lock scroll while open (mobile).
-  useEffect(() => {
-    if (!mobileMenuOpen) return;
+  const pendingSettlements = useMemo(
+    () => calculateOptimalSettlements(balances ?? []),
+    [balances]
+  );
 
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMobileMenuOpen(false);
-    };
+  if (loading) {
+    return (
+      <PageWrapper>
+        <Navbar />
+        <WorkspaceShell>
+          <Card>Loading shared trip…</Card>
+        </WorkspaceShell>
+      </PageWrapper>
+    );
+  }
 
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    window.addEventListener('keydown', onKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener('keydown', onKeyDown);
-    };
-  }, [mobileMenuOpen]);
-
-  useEffect(() => {
-    const run = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const fromHash = parseAccessTokenFromHash(window.location.hash);
-        const fromSession = sessionStorage.getItem(SESSION_LAST_TOKEN_KEY);
-        const tokenCandidate = (fromHash || fromSession || '').trim();
-
-        if (!tokenCandidate || !isValidUuid(tokenCandidate)) {
-          throw new Error('Invalid or missing access token.');
-        }
-
-        // Strip fragment ASAP to reduce accidental leakage (clipboard/referrer/screen recordings)
-        if (window.location.hash) {
-          window.history.replaceState(
-            null,
-            document.title,
-            window.location.pathname + window.location.search
-          );
-        }
-
-        setTripAccessToken(tokenCandidate);
-        sessionStorage.setItem(SESSION_LAST_TOKEN_KEY, tokenCandidate);
-
-        const preview = await api.previewTripByAccess(tokenCandidate);
-        const tripId = preview.id;
-
-        sessionStorage.setItem(`${SESSION_TRIP_TOKEN_PREFIX}${tripId}`, tokenCandidate);
-
-        // Load full data via standard endpoints + X-Trip-Access
-        const t = await api.getTrip(tripId, { tripAccessToken: tokenCandidate });
-        setTrip(t);
-
-        const items = await api.listItinerary(tripId, { tripAccessToken: tokenCandidate });
-        setItinerary(items);
-
-        const expensesList = await api.listExpenses(tripId, { tripAccessToken: tokenCandidate });
-        const mappedExpenses: MockExpense[] = expensesList.map((exp) => {
-          const expAny = exp as unknown as { created_at?: string; date?: string; category?: string };
-          return {
-            ...exp,
-            date: expAny.date || expAny.created_at || new Date().toISOString(),
-            category: expAny.category || 'Other',
-          };
-        });
-        setExpenses(mappedExpenses);
-
-        const b = await api.getBalances(tripId, { tripAccessToken: tokenCandidate });
-        setBalances(b);
-      } catch (e) {
-        console.error(e);
-        const message = e instanceof Error ? e.message : 'Failed to load trip.';
-        setError(message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    run();
-  }, []);
-
-  const handleTripUpdate = (updatedTrip: TripRead) => {
-    setTrip(updatedTrip);
-  };
-
-  const handleItineraryRefresh = async () => {
-    if (!trip?.id || !tripAccessToken) return;
-    try {
-      const items = await api.listItinerary(trip.id, tripSyncOpts);
-      setItinerary(items);
-    } catch (e) {
-      console.error('Failed to refresh itinerary:', e);
-    }
-  };
-
-  const handleExpensesUpdate = async () => {
-    if (!trip?.id || !tripAccessToken) return;
-    try {
-      const expensesList = await api.listExpenses(trip.id, tripSyncOpts);
-      const mappedExpenses: MockExpense[] = expensesList.map((exp) => {
-        const expAny = exp as unknown as { created_at?: string; date?: string; category?: string };
-        return {
-          ...exp,
-          date: expAny.date || expAny.created_at || new Date().toISOString(),
-          category: expAny.category || 'Other',
-        };
-      });
-      setExpenses(mappedExpenses);
-      const b = await api.getBalances(trip.id, tripSyncOpts);
-      setBalances(b);
-    } catch (e) {
-      console.error('Failed to refresh expenses:', e);
-    }
-  };
+  if (error || !trip) {
+    return (
+      <PageWrapper>
+        <Navbar />
+        <WorkspaceShell>
+          <Card>
+            <h2 style={{ margin: '0 0 0.5rem' }}>Unable to open shared trip</h2>
+            <p style={{ margin: '0 0 1rem', opacity: 0.8 }}>
+              {error || 'Trip not found.'}
+            </p>
+            <ModeToggleBtn
+              type="button"
+              active={false}
+              onClick={() => router.push('/tripsync')}
+            >
+              ← Go to TripSync Hub
+            </ModeToggleBtn>
+          </Card>
+        </WorkspaceShell>
+      </PageWrapper>
+    );
+  }
 
   return (
     <PageWrapper>
       <Navbar />
-      <ContentWrapper>
-        <Sidebar>
-          <SidebarContent>
-            <TripInfo>
-              <TripTitleRow>
-                <TripTitle>{trip?.name || 'Trip'}</TripTitle>
-                <TripMenuButton
-                  type="button"
-                  aria-label={mobileMenuOpen ? 'Close trip menu' : 'Open trip menu'}
-                  aria-expanded={mobileMenuOpen}
-                  aria-controls="trip-mobile-menu"
-                  onClick={() => setMobileMenuOpen((v) => !v)}
-                >
-                  {mobileMenuOpen ? '✕' : '☰'}
-                </TripMenuButton>
-              </TripTitleRow>
-              {trip?.description && <TripDescription>{trip.description}</TripDescription>}
-              <TripMeta>
-                <span>👥</span>
-                <span>
-                  {trip?.members.length || 0} member{trip?.members.length !== 1 ? 's' : ''}
-                </span>
-              </TripMeta>
-            </TripInfo>
-
-            <NavSection>
-              {sections.map((section) => (
-                <NavButton
-                  key={section}
-                  active={activeSection === section}
-                  onClick={() => setActiveSection(section)}
-                >
-                  {section}
-                </NavButton>
-              ))}
-            </NavSection>
-          </SidebarContent>
-        </Sidebar>
-
-        <MobileOverlay open={mobileMenuOpen} aria-hidden={!mobileMenuOpen} onClick={() => setMobileMenuOpen(false)} />
-        {mobileMenuOpen && (
-          <MobileMenu id="trip-mobile-menu" role="dialog" aria-modal="true" aria-label="Trip sections">
-            {sections.map((section) => (
-              <MobileMenuItem
-                key={section}
-                type="button"
-                active={activeSection === section}
-                onClick={() => {
-                  setActiveSection(section);
-                  setMobileMenuOpen(false);
-                }}
+      <WorkspaceShell>
+        <CommandBar>
+          <TopRow>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+              <Title>{trip.name}</Title>
+              <Badge tone="primary">Shared Link Access</Badge>
+              <Badge>Total: {formatCurrency(analytics.totalAmount)}</Badge>
+              <Badge
+                tone={pendingSettlements.length === 0 ? 'success' : 'warning'}
               >
-                {section}
-              </MobileMenuItem>
-            ))}
-          </MobileMenu>
+                {pendingSettlements.length === 0
+                  ? '✓ Settled'
+                  : `${pendingSettlements.length} Settlement${
+                      pendingSettlements.length === 1 ? '' : 's'
+                    } Due`}
+              </Badge>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <ModeToggleBtn
+                type="button"
+                active={canEdit}
+                onClick={() => setCanEdit((v) => !v)}
+              >
+                {canEdit ? '✏️ Edit Mode Enabled' : '🔒 Read-Only (Click to Edit)'}
+              </ModeToggleBtn>
+            </div>
+          </TopRow>
+
+          <TabsRow>
+            <TabButton
+              type="button"
+              active={activeSection === 'expenses'}
+              onClick={() => setActiveSection('expenses')}
+            >
+              💸 Expenses ({expenses.length})
+            </TabButton>
+            <TabButton
+              type="button"
+              active={activeSection === 'settlements'}
+              onClick={() => setActiveSection('settlements')}
+            >
+              🤝 Settlements ({pendingSettlements.length})
+            </TabButton>
+            <TabButton
+              type="button"
+              active={activeSection === 'itinerary'}
+              onClick={() => setActiveSection('itinerary')}
+            >
+              🗓️ Itinerary ({itinerary.length})
+            </TabButton>
+            <TabButton
+              type="button"
+              active={activeSection === 'details'}
+              onClick={() => setActiveSection('details')}
+            >
+              🗺️ Brief & Stays
+            </TabButton>
+            <TabButton
+              type="button"
+              active={activeSection === 'members'}
+              onClick={() => setActiveSection('members')}
+            >
+              👥 Travelers ({trip.members.length})
+            </TabButton>
+          </TabsRow>
+        </CommandBar>
+
+        {(activeSection === 'expenses' || activeSection === 'settlements') && (
+          <ExpensesSection
+            tripId={trip.id}
+            members={trip.members}
+            expenses={expenses}
+            balances={balances}
+            settlements={settlements}
+            focusSettlements={activeSection === 'settlements'}
+            onExpensesChange={setExpenses}
+            onUpdate={loadByToken}
+            tripAccessToken={token}
+            canEdit={canEdit}
+          />
         )}
 
-        <MainContent>
-          <MainPanel>
-            <PanelHeader>
-              <PanelTitle>{activeSection}</PanelTitle>
-            </PanelHeader>
+        {activeSection === 'itinerary' && (
+          <ItinerarySection
+            tripId={trip.id}
+            items={itinerary}
+            tripAccessToken={token}
+            canEdit={canEdit}
+            onItemsChange={setItinerary}
+            onRefresh={loadByToken}
+            docRevision={tripDoc?.revision ?? null}
+          />
+        )}
 
-            {loading ? (
-              <p>Loading...</p>
-            ) : error ? (
-              <Notice>{error}</Notice>
-            ) : (
-              <>
-                <Notice>
-                  You’re viewing this trip via a share link. Anyone with this link can edit this
-                  trip.
-                  <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <button
-                      onClick={() => {
-                        if (!quicklinkEditEnabled) {
-                          const ok = confirm(
-                            'Enable editing for this share link on this device? Anyone with this link can edit this trip.'
-                          );
-                          if (!ok) return;
-                        }
-                        setQuicklinkEditEnabled((v) => !v);
-                      }}
-                      style={{
-                        padding: '0.55rem 0.85rem',
-                        borderRadius: '10px',
-                        border: quicklinkEditEnabled ? 'none' : '1px solid var(--border)',
-                        background: quicklinkEditEnabled ? 'var(--primary)' : 'transparent',
-                        color: quicklinkEditEnabled ? 'white' : 'var(--text)',
-                        cursor: 'pointer',
-                        fontWeight: 800,
-                      }}
-                    >
-                      {quicklinkEditEnabled ? 'Editing enabled' : 'Enable editing'}
-                    </button>
-                    {!quicklinkEditEnabled && (
-                      <span style={{ fontSize: '0.9rem', color: 'var(--muted-text)' }}>
-                        (recommended) Keep disabled unless you intend to change data.
-                      </span>
-                    )}
-                  </div>
-                </Notice>
+        {activeSection === 'details' && (
+          <TripDetailsSection
+            tripId={trip.id}
+            tripAccessToken={token}
+            canEdit={canEdit}
+            onDocLoaded={(d) => setTripDoc(d)}
+            onDocUpdated={(d) => setTripDoc(d)}
+            onNeedRefresh={loadByToken}
+          />
+        )}
 
-                {activeSection === 'members' && trip && (
-                  <MembersSection
-                    tripId={trip.id}
-                    members={trip.members}
-                    onUpdate={handleTripUpdate}
-                    tripAccessToken={tripAccessToken ?? undefined}
-                    canEdit={quicklinkEditEnabled}
-                  />
-                )}
-
-                {activeSection === 'details' && trip && (
-                  <TripDetailsSection
-                    tripId={trip.id}
-                    tripAccessToken={tripAccessToken ?? undefined}
-                    canEdit={quicklinkEditEnabled}
-                    onNeedRefresh={handleItineraryRefresh}
-                  />
-                )}
-
-                {activeSection === 'itinerary' && trip && (
-                  <ItinerarySection
-                    tripId={trip.id}
-                    items={itinerary}
-                    tripAccessToken={tripAccessToken ?? undefined}
-                    canEdit={quicklinkEditEnabled}
-                    onRefresh={handleItineraryRefresh}
-                  />
-                )}
-
-                {activeSection === 'expenses' && trip && (
-                  <ExpensesSection
-                    tripId={trip.id}
-                    members={trip.members}
-                    expenses={expenses}
-                    balances={balances}
-                    onUpdate={handleExpensesUpdate}
-                    tripAccessToken={tripAccessToken ?? undefined}
-                    canEdit={quicklinkEditEnabled}
-                  />
-                )}
-              </>
-            )}
-          </MainPanel>
-        </MainContent>
-      </ContentWrapper>
+        {activeSection === 'members' && (
+          <MembersSection
+            tripId={trip.id}
+            members={trip.members}
+            balances={balances ?? []}
+            onUpdate={(updatedTrip) => {
+              setTrip(updatedTrip);
+              void loadByToken();
+            }}
+            tripAccessToken={token}
+            canEdit={canEdit}
+          />
+        )}
+      </WorkspaceShell>
     </PageWrapper>
   );
 }
 
-
+export default function TripAccessPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: '6rem 2rem' }}>Loading…</div>}>
+      <TripAccessInner />
+    </Suspense>
+  );
+}

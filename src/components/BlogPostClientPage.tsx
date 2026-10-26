@@ -11,12 +11,13 @@ import { BlogPost, Comment } from '@/types'; // Import your types
 const PostContainer = styled.article`
   max-width: 800px;
   margin: 0 auto;
-  padding: 4rem 2rem;
-  
-  // Basic styles for rendered markdown
-  h1, h2, h3 { margin: 1.5rem 0 1rem; }
-  p { line-height: 1.7; }
+  padding: 6rem 2rem 4rem;
+  color: ${({ theme }) => theme.text};
+
+  h1, h2, h3 { margin: 1.5rem 0 1rem; color: ${({ theme }) => theme.text}; }
+  p { line-height: 1.7; color: ${({ theme }) => theme.text}; }
   pre { border-radius: 8px; }
+  hr { border: 0; border-top: 1px solid ${({ theme }) => theme.border}; }
 `;
 
 interface Props {
